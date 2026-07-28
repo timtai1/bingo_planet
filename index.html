@@ -100,6 +100,12 @@
   .cell.plusone .num{color:#eaffea;text-shadow:0 0 8px #6f6;}
   .cell.lineWin{animation:lineFlash .3s alternate infinite;}
   @keyframes lineFlash{from{filter:brightness(1);}to{filter:brightness(2);}}
+  /* 四象限的 A~D 呼吸標記：淡淡覆蓋各自的 2x2 區塊 */
+  .quadMark{position:absolute;width:40%;height:40%;display:flex;align-items:center;justify-content:center;
+    font-size:clamp(36px,11vh,96px);font-weight:900;font-style:italic;color:var(--neon-blue);
+    pointer-events:none;z-index:1;animation:quadBreath 2.2s ease-in-out infinite alternate;}
+  #qmA{left:0;top:0;} #qmB{right:0;top:0;} #qmC{left:0;bottom:0;} #qmD{right:0;bottom:0;}
+  @keyframes quadBreath{from{opacity:.06;}to{opacity:.28;}}
 
   #oddsX{margin:4px 8% 0;text-align:center;border:2px solid #2b6cff;border-radius:12px;
     padding:2px 0;font-size:clamp(11px,1.4vw,16px);font-weight:bold;color:#bfe9ff;
@@ -132,11 +138,12 @@
   #meteor{position:relative;width:64px;height:40px;border:2px solid #4a5;border-radius:50%;
     background:radial-gradient(circle at 60% 40%,#031,#010b04);overflow:hidden;flex:0 0 auto;}
   .star{position:absolute;width:3px;height:3px;border-radius:50%;background:#8fc;}
+  /* 流星由右上往左下飛：亮頭在左端（前進方向），尾巴淡出朝右上 */
   .meteorFx{position:absolute;width:26px;height:2px;border-radius:2px;
-    background:linear-gradient(90deg,transparent,#bff,#fff);
+    background:linear-gradient(270deg,transparent,#bff,#fff);
     animation:meteorMove .5s linear forwards;}
-  @keyframes meteorMove{from{transform:translate(70px,-6px) rotate(20deg);opacity:1;}
-    to{transform:translate(-30px,30px) rotate(20deg);opacity:0;}}
+  @keyframes meteorMove{from{transform:translate(70px,-6px) rotate(-20deg);opacity:1;}
+    to{transform:translate(-30px,30px) rotate(-20deg);opacity:0;}}
   #scoreCols{flex:1 1 auto;display:flex;gap:10px;}
   .scorePair{display:flex;flex-direction:column;gap:1px;}
   .scorePair .k{color:#9f9;font-size:.8em;}
@@ -153,7 +160,9 @@
   #msg.show{opacity:1;}
 
   /* ---------- 按鈕面板 ---------- */
-  .abcd{width:min(9vh,64px);height:min(9vh,64px);border-radius:50%;
+  /* A~D 按鈕 2x2 排列：AB 在上、CD 在下，對應賓果卡四象限的相對位置 */
+  #quadBtns{display:grid;grid-template-columns:auto auto;gap:2px 10px;justify-items:center;}
+  .abcd{width:min(6.5vh,48px);height:min(6.5vh,48px);border-radius:50%;
     border:3px solid #2bd; background:radial-gradient(circle at 35% 30%,#1a7ad0,#03306a);
     color:#fff;font-size:clamp(14px,2.5vh,22px);font-weight:900;cursor:pointer;
     box-shadow:0 4px 0 #012,0 0 10px #08f;}
@@ -242,7 +251,12 @@
         <div id="cardCol">
           <div id="cardFrame">
             <div id="cardTitle">BINGO CARD</div>
-            <div id="bingoGrid"></div>
+            <div id="bingoGrid">
+              <div class="quadMark" id="qmA">A</div>
+              <div class="quadMark" id="qmB">B</div>
+              <div class="quadMark" id="qmC">C</div>
+              <div class="quadMark" id="qmD">D</div>
+            </div>
           </div>
           <div id="oddsX">ODDS X1</div>
         </div>
@@ -273,10 +287,12 @@
     <div class="hsplit" id="hsplit"></div>
     <div id="buttonPane">
       <div id="statusLine">開局倒數 30 秒內可下注（BET 可長按連押）與旋轉 A~D。</div>
-      <div class="btnWrap"><button class="abcd" id="btnA">A</button><div class="btnLabel">左上</div></div>
-      <div class="btnWrap"><button class="abcd" id="btnB">B</button><div class="btnLabel">右上</div></div>
-      <div class="btnWrap"><button class="abcd" id="btnC">C</button><div class="btnLabel">左下</div></div>
-      <div class="btnWrap"><button class="abcd" id="btnD">D</button><div class="btnLabel">右下</div></div>
+      <div id="quadBtns">
+        <div class="btnWrap"><button class="abcd" id="btnA">A</button><div class="btnLabel">左上</div></div>
+        <div class="btnWrap"><button class="abcd" id="btnB">B</button><div class="btnLabel">右上</div></div>
+        <div class="btnWrap"><button class="abcd" id="btnC">C</button><div class="btnLabel">左下</div></div>
+        <div class="btnWrap"><button class="abcd" id="btnD">D</button><div class="btnLabel">右下</div></div>
+      </div>
       <div class="btnWrap"><button class="betBtn" id="betBtn1">BET<br>1</button><div class="btnLabel">押注 1 (Space)</div></div>
       <div class="btnWrap"><button class="betBtn bet10" id="betBtn10">BET<br>10</button><div class="btnLabel">押注 10 (Enter)</div></div>
       <div class="btnWrap"><button id="creditBtn">CREDITS<br>+1000</button></div>
@@ -518,7 +534,7 @@ function rotateQuad(q){
 /* =====================================================================
  * Three.js 3D 轉盤
  * ===================================================================== */
-const DISH_R = 10, DISH_A = 0.045, GRAV = 9.8;
+const DISH_R = 10, DISH_A = 0.0225, GRAV = 9.8;   // 深度為原設計的一半
 const WHEEL_W = 0.35;      // 轉盤角速度（弧度/秒，順時針）
 const dishY = r => DISH_A * r * r;
 const HOLE_R = 0.52, BALL_R = HOLE_R * 0.9;   // 球直徑為 1~25 洞直徑的 90%
