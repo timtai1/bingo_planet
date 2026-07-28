@@ -103,11 +103,13 @@
   #oddsHead div{flex:1;text-align:center;background:#301;color:#f88;border:1px solid #611;
     font-size:clamp(7px,0.9vw,10px);padding:1px 0;border-radius:3px;margin:0 1px;}
   #oddsTable{flex:1 1 auto;display:flex;flex-direction:column-reverse;min-height:0;}
-  .oddsRow{flex:1 1 0;display:flex;align-items:center;}
+  .oddsRow{flex:1 1 0;display:flex;align-items:center;border-radius:3px;}
   .oddsRow div{flex:1;text-align:center;font-weight:900;
     font-size:clamp(9px,1.5vh,16px);letter-spacing:1px;}
+  .oddsRow.cur{animation:rowBreath 1s ease-in-out alternate infinite;}
   .oddsRow.cur div{animation:lvBlink .35s alternate infinite;}
   @keyframes lvBlink{from{filter:brightness(.9);}to{filter:brightness(2.2);text-shadow:0 0 10px currentColor;}}
+  @keyframes rowBreath{from{background-color:transparent;}to{background-color:var(--rowbg);}}
   #lineRow{display:flex;gap:3px;margin-top:3px;}
   .lineBox{flex:1;text-align:center;border:1px solid #2b6cff;border-radius:3px;background:#071040;
     color:#8fd6ff;font-size:clamp(7px,0.9vw,10px);padding:2px 0;line-height:1.1;}
@@ -148,12 +150,15 @@
   .abcd:active,.abcd.held{transform:translateY(3px);box-shadow:0 1px 0 #012,0 0 18px #0ff;
     background:radial-gradient(circle at 35% 30%,#3fd0ff,#0a55aa);}
   .abcd:disabled{opacity:.35;cursor:not-allowed;}
-  #betBtn{width:min(13vh,96px);height:min(13vh,96px);border-radius:50%;border:4px solid #f66;
+  .betBtn{width:min(12vh,88px);height:min(12vh,88px);border-radius:50%;border:4px solid #f66;
     background:radial-gradient(circle at 35% 30%,#ff5040,#7a0a00);color:#fff;
-    font-size:clamp(13px,2.4vh,20px);font-weight:900;cursor:pointer;
+    font-size:clamp(12px,2.2vh,18px);font-weight:900;cursor:pointer;line-height:1.1;
     box-shadow:0 5px 0 #300,0 0 16px #f30;}
-  #betBtn:active{transform:translateY(4px);box-shadow:0 1px 0 #300,0 0 26px #ff0;}
-  #betBtn:disabled{opacity:.35;cursor:not-allowed;}
+  .betBtn:active{transform:translateY(4px);box-shadow:0 1px 0 #300,0 0 26px #ff0;}
+  .betBtn:disabled{opacity:.35;cursor:not-allowed;}
+  .betBtn.bet10{border-color:#fc6;
+    background:radial-gradient(circle at 35% 30%,#ffb340,#7a4a00);
+    box-shadow:0 5px 0 #430,0 0 16px #fa0;}
   #creditBtn{padding:8px 12px;border-radius:8px;border:2px solid #4f6;background:#052;
     color:#cfc;font-weight:bold;cursor:pointer;font-size:clamp(10px,1.6vh,14px);}
   #creditBtn:active{background:#0a4;}
@@ -234,12 +239,13 @@
     </div>
     <div class="hsplit" id="hsplit"></div>
     <div id="buttonPane">
-      <div id="statusLine">按 BET 下注（可按住連押）。第三球入洞前可下注。</div>
+      <div id="statusLine">按 BET 1 / BET 10 下注（可按住連押）。第三球入洞前可下注。</div>
       <div class="btnWrap"><button class="abcd" id="btnA">A</button><div class="btnLabel">左上</div></div>
       <div class="btnWrap"><button class="abcd" id="btnB">B</button><div class="btnLabel">右上</div></div>
       <div class="btnWrap"><button class="abcd" id="btnC">C</button><div class="btnLabel">左下</div></div>
       <div class="btnWrap"><button class="abcd" id="btnD">D</button><div class="btnLabel">右下</div></div>
-      <div class="btnWrap"><button id="betBtn">BET</button><div class="btnLabel">押注 (Space)</div></div>
+      <div class="btnWrap"><button class="betBtn" id="betBtn1">BET<br>1</button><div class="btnLabel">押注 1 (Space)</div></div>
+      <div class="btnWrap"><button class="betBtn bet10" id="betBtn10">BET<br>10</button><div class="btnLabel">押注 10 (Enter)</div></div>
       <div class="btnWrap"><button id="creditBtn">CREDITS<br>+1000</button></div>
     </div>
   </div>
@@ -321,10 +327,16 @@ const cellEls = [];
   // column-reverse：等級 1 在最下、等級 10 在最上（同實機面板）
   const colors = ["#3a3a4a","#39ff6a","#39ff6a","#39ff6a","#39ff6a",
                   "#ff9d33","#ff6a33","#ff4d4d","#ff3333","#ffdf3a"];
+  const hexToRgba = (hex, a) => {
+    const n = parseInt(hex.slice(1), 16);
+    return "rgba(" + (n>>16&255) + "," + (n>>8&255) + "," + (n&255) + "," + a + ")";
+  };
   for(let lv = 0; lv < 10; lv++){
     const r = document.createElement("div");
     r.className = "oddsRow"; r.id = "odds_lv"+(lv+1);
     r.style.color = colors[lv];
+    // 目前等級整行呼吸閃爍的底色：使用該行文字顏色再淡一半
+    r.style.setProperty("--rowbg", hexToRgba(colors[lv], 0.5));
     PAYTABLE[lv].forEach(v=>{
       const c = document.createElement("div"); c.textContent = v; r.appendChild(c);
     });
@@ -418,16 +430,6 @@ function triggerPlusOne(){
 }
 
 /* ---------------- 四區塊旋轉 ---------------- */
-let heldQuad = null;
-function tryQuadSpin(){
-  if(!S.spinWindow || !heldQuad || S.rotating) return;
-  if(Math.random() < 1/10){
-    rotateQuad(heldQuad);
-    showMsg("SPIN " + heldQuad + " !", 1200);
-  } else {
-    setStatus(heldQuad + " 區塊旋轉失敗（機率 1/10），可再試");
-  }
-}
 function rotateQuad(q){
   // 四格數字順時針緩慢移動，一秒完成
   const idx = QUADS[q];                 // [左上,右上,右下,左下]
@@ -465,6 +467,14 @@ function rotateQuad(q){
 const DISH_R = 10, DISH_A = 0.045, GRAV = 9.8;
 const WHEEL_W = 0.35;      // 轉盤角速度（弧度/秒，順時針）
 const dishY = r => DISH_A * r * r;
+const HOLE_R = 0.52, BALL_R = HOLE_R * 0.9;   // 球直徑為 1~25 洞直徑的 90%
+const REST_DEPTH = 0.62;                       // 球坐進洞內的深度，頂部微露出洞口
+const RINGS = [
+  {count:10, radius:8.2, start:1},
+  {count:10, radius:5.8, start:11},
+  {count:5,  radius:3.4, start:21},
+];
+const holeAngle = (rg, i) => (i / rg.count) * Math.PI * 2 + (rg.start === 11 ? Math.PI/rg.count : 0);
 
 const canvas = $("wheelCanvas");
 const renderer = new THREE.WebGLRenderer({canvas, antialias:true});
@@ -495,7 +505,7 @@ scene.add(new THREE.AmbientLight(0x334466, 1.2));
 const wheel = new THREE.Group();
 scene.add(wheel);
 
-// 鍋形盤面（LatheGeometry 旋轉曲面）
+// 鍋形盤面（LatheGeometry 旋轉曲面），用 alpha 貼圖把 26 個洞真正挖穿
 (function buildDish(){
   const pts = [];
   for(let i = 0; i <= 24; i++){
@@ -503,8 +513,34 @@ scene.add(wheel);
     pts.push(new THREE.Vector2(r, dishY(r)));
   }
   pts.push(new THREE.Vector2(DISH_R + 0.6, dishY(DISH_R) + 1.2)); // 外牆
-  const geo = new THREE.LatheGeometry(pts, 72);
-  const mat = new THREE.MeshStandardMaterial({color:0x0a1440, metalness:0.7, roughness:0.35, side:THREE.DoubleSide});
+  const geo = new THREE.LatheGeometry(pts, 144);
+  // alpha 貼圖：白 = 保留、黑 = 挖洞。u 對應繞盤角度、v 對應 profile 半徑
+  const cv = document.createElement("canvas"); cv.width = 2048; cv.height = 512;
+  const c2 = cv.getContext("2d");
+  c2.fillStyle = "#fff"; c2.fillRect(0, 0, 2048, 512);
+  c2.fillStyle = "#000";
+  const vOf = r => (r / DISH_R) * (24 / 25);            // 第 25 個 profile 點是外牆
+  // 中央回收洞（r < 1.0 全挖空）
+  c2.fillRect(0, 512 - vOf(1.0)*512, 2048, vOf(1.0)*512 + 2);
+  // 1~25 號洞：LatheGeometry 的頂點角 phi 滿足 x=r*sin(phi), z=r*cos(phi)
+  RINGS.forEach(rg=>{
+    for(let i = 0; i < rg.count; i++){
+      const ang = holeAngle(rg, i);
+      let u = ((Math.PI/2 - ang) / (Math.PI*2)) % 1; if(u < 0) u += 1;
+      const px = u * 2048;
+      const py = 512 - vOf(rg.radius) * 512;
+      const ru = (HOLE_R / (Math.PI*2*rg.radius)) * 2048;
+      const rv = (HOLE_R / DISH_R) * (24/25) * 512;
+      [px - 2048, px, px + 2048].forEach(cx=>{        // 處理 u 方向的環繞
+        c2.beginPath();
+        c2.ellipse(cx, py, ru, rv, 0, 0, Math.PI*2);
+        c2.fill();
+      });
+    }
+  });
+  const alphaTex = new THREE.CanvasTexture(cv);
+  const mat = new THREE.MeshStandardMaterial({color:0x0a1440, metalness:0.7, roughness:0.35,
+    side:THREE.DoubleSide, alphaMap:alphaTex, alphaTest:0.5});
   wheel.add(new THREE.Mesh(geo, mat));
   // 盤面放射狀裝飾線
   const lineMat = new THREE.LineBasicMaterial({color:0x2244aa, transparent:true, opacity:0.5});
@@ -526,36 +562,46 @@ scene.add(wheel);
 })();
 
 // 26 洞：外圈 1~10 / 中圈 11~20 / 內圈 21~25
-const HOLE_R = 0.52, BALL_R = 0.3;
 const holes = [];   // {num,r,ang,yellow,occupied,ringMesh}
-function numberSprite(num, color){
-  const cv = document.createElement("canvas"); cv.width = cv.height = 64;
+function numberPlate(num, color){
+  const cv = document.createElement("canvas"); cv.width = cv.height = 128;
   const ctx = cv.getContext("2d");
-  ctx.font = "bold 40px Arial"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
-  ctx.fillStyle = color; ctx.shadowColor = color; ctx.shadowBlur = 12;
-  ctx.fillText(String(num), 32, 34);
-  const sp = new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(cv), transparent:true, depthTest:false}));
-  sp.scale.set(1.1, 1.1, 1);
-  return sp;
+  ctx.font = "bold 84px Arial"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+  ctx.fillStyle = color; ctx.shadowColor = color; ctx.shadowBlur = 22;
+  ctx.fillText(String(num), 64, 70);
+  const mat = new THREE.MeshBasicMaterial({map:new THREE.CanvasTexture(cv), transparent:true, depthWrite:false});
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(1.7, 1.7), mat);
+  m.rotation.x = -Math.PI/2;   // 平躺於盤面，文字上緣朝盤中心（由外側視角可讀）
+  return m;
+}
+// 回傳一個貼平鍋面的群組：局部 Y 為表面法線、Z 指向盤外側
+function surfaceGroup(radius, ang){
+  const x = Math.cos(ang)*radius, z = Math.sin(ang)*radius;
+  const nrm = new THREE.Vector3(-2*DISH_A*x, 1, -2*DISH_A*z).normalize();
+  const rOut = new THREE.Vector3(x, 0, z).normalize();
+  rOut.sub(nrm.clone().multiplyScalar(rOut.dot(nrm))).normalize();
+  const tan = new THREE.Vector3().crossVectors(nrm, rOut);
+  const g = new THREE.Group();
+  g.position.set(x, dishY(radius), z);
+  g.quaternion.setFromRotationMatrix(new THREE.Matrix4().makeBasis(tan, nrm, rOut));
+  return g;
 }
 (function buildHoles(){
-  const rings = [
-    {count:10, radius:8.2, start:1},
-    {count:10, radius:5.8, start:11},
-    {count:5,  radius:3.4, start:21},
-  ];
-  rings.forEach(rg=>{
+  RINGS.forEach(rg=>{
     for(let i = 0; i < rg.count; i++){
       const num = rg.start + i;
-      const ang = (i / rg.count) * Math.PI * 2 + (rg.start === 11 ? Math.PI/rg.count : 0);
+      const ang = holeAngle(rg, i);
       const yellow = YELLOW_HOLES.has(num);
-      const x = Math.cos(ang)*rg.radius, z = Math.sin(ang)*rg.radius, y = dishY(rg.radius);
-      // 洞（下凹圓柱）
+      // 依鍋面法線建立局部座標系，洞環與編號才會貼平所在位置的盤面斜率
+      const g = surfaceGroup(rg.radius, ang);
+      wheel.add(g);
+      // 洞壁（開口圓筒，頂端開放讓球真正掉進去）+ 洞底
+      const cupMat = new THREE.MeshStandardMaterial({color:0x02020a, side:THREE.DoubleSide});
       const cup = new THREE.Mesh(
-        new THREE.CylinderGeometry(HOLE_R, HOLE_R*0.7, 0.8, 20),
-        new THREE.MeshStandardMaterial({color:0x02020a})
-      );
-      cup.position.set(x, y-0.35, z); wheel.add(cup);
+        new THREE.CylinderGeometry(HOLE_R+0.02, HOLE_R*0.85, 1.0, 20, 1, true), cupMat);
+      cup.position.y = -0.48; g.add(cup);
+      const bottom = new THREE.Mesh(new THREE.CircleGeometry(HOLE_R*0.85, 20), cupMat);
+      bottom.rotation.x = -Math.PI/2; bottom.position.y = -0.97; g.add(bottom);
       // 發光洞環：5/10/15/20/25 黃燈，其餘紅燈
       const col = yellow ? 0xffcc00 : 0xff2222;
       const ring = new THREE.Mesh(
@@ -563,12 +609,13 @@ function numberSprite(num, color){
         new THREE.MeshStandardMaterial({color:col, emissive:col, emissiveIntensity:0.9})
       );
       ring.rotation.x = Math.PI/2;
-      // 環貼齊盤面斜率
-      ring.position.set(x, y+0.06, z);
-      wheel.add(ring);
-      const sp = numberSprite(num, yellow ? "#ffd60a" : "#ff5555");
-      sp.position.set(x, y+0.75, z);
-      wheel.add(sp);
+      ring.position.y = 0.03; g.add(ring);
+      // 編號牌錨定在自己所在半徑的表面（避免因鍋面曲率沉入盤面）
+      const pg = surfaceGroup(rg.radius + HOLE_R + 0.95, ang);
+      const plate = numberPlate(num, yellow ? "#ffd60a" : "#ff5555");
+      plate.position.y = 0.06;
+      pg.add(plate);
+      wheel.add(pg);
       holes.push({num, r:rg.radius, ang, yellow, occupied:false, ringMesh:ring, cup});
     }
   });
@@ -630,25 +677,46 @@ function stepBall(b, dt, now){
   }
   // 中央回收洞：補發球
   if(nr < 1.0){
-    b.state = "sinking"; b.hole = null; b.sinkT = now;
+    b.state = "recycling";
     setStatus("球落入回收洞，補發一球");
     setTimeout(()=>{ removeBall(b); relaunch(b.ballIndex); }, 900);
     b.x=x; b.z=z; return;
   }
-  // 洞判定
+  // 洞判定：洞緣物理碰撞 + 慢速翻入洞內
   for(const h of holes){
     const hp = holeWorldPos(h);
     const d = Math.hypot(x-hp.x, z-hp.z);
-    if(d < HOLE_R*0.95){
-      const relV = Math.hypot(vx - sv.x, vz - sv.z);
-      if(!h.occupied && relV < 3.4){
-        captureBall(b, h, now); b.x=x; b.z=z; return;
-      } else {
-        // 高速通過或洞已有球：彈出（往外側踢一下）
-        const kick = 2.2;
-        vx += (x-hp.x)/Math.max(d,0.05)*kick;
-        vz += (z-hp.z)/Math.max(d,0.05)*kick;
+    if(h.occupied){
+      // 洞內已有球（頂部露出洞口）：做圓對圓碰撞反彈
+      const lim = BALL_R * 1.8;
+      if(d < lim && d > 1e-4){
+        const nx = (x-hp.x)/d, nz = (z-hp.z)/d;
+        const vn = vx*nx + vz*nz;
+        if(vn < 0){ vx -= 1.7*vn*nx; vz -= 1.7*vn*nz; }
+        x = hp.x + nx*lim; z = hp.z + nz*lim;
       }
+      continue;
+    }
+    const relVx = vx - sv.x, relVz = vz - sv.z;
+    const relV = Math.hypot(relVx, relVz);
+    if(d < HOLE_R*0.9 && relV < 5.0){
+      // 球心越過洞緣且來不及飛越洞口：翻入洞內（進入落下物理）
+      startCapture(b, h, now, x, z, vx, vz);
+      return;
+    }
+    if(d < HOLE_R && relV >= 5.0){
+      // 高速輾過洞口：撞擊洞緣反彈並損失能量，撞幾次自然變慢入洞
+      const nx = (x-hp.x)/Math.max(d,1e-4), nz = (z-hp.z)/Math.max(d,1e-4);
+      const vn = relVx*nx + relVz*nz;
+      if(vn < 0){
+        vx -= 1.55*vn*nx; vz -= 1.55*vn*nz;
+        vx = sv.x + (vx - sv.x)*0.7; vz = sv.z + (vz - sv.z)*0.7;
+      }
+    } else if(d < HOLE_R*2.4 && relV < 4.0){
+      // 洞口周圍的漏斗導引：慢速球被導向洞心
+      const pull = 10 * (1 - d/(HOLE_R*2.4));
+      vx += (hp.x-x)/Math.max(d,1e-4) * pull * dt;
+      vz += (hp.z-z)/Math.max(d,1e-4) * pull * dt;
     }
   }
   // 超過 25 秒未入洞：強制落入最近空洞，避免流局
@@ -660,15 +728,37 @@ function stepBall(b, dt, now){
       const d = Math.hypot(x-hp.x, z-hp.z);
       if(d < bd){ bd = d; best = h; }
     }
-    if(best){ captureBall(b, best, now); b.x=x; b.z=z; return; }
+    if(best){ startCapture(b, best, now, x, z, vx, vz); return; }
   }
   b.x=x; b.z=z; b.vx=vx; b.vz=vz;
   const y = dishY(Math.hypot(x,z)) + BALL_R;
   b.mesh.position.set(x, y, z);
 }
-function captureBall(b, h, now){
-  b.state = "sinking"; b.hole = h; h.occupied = true; b.sinkT = now;
-  setTimeout(()=>{ b.state = "landed"; onBallLanded(b, h); }, 600);
+function startCapture(b, h, now, x, z, vx, vz){
+  b.state = "capturing"; b.hole = h; h.occupied = true;
+  const hp = holeWorldPos(h);
+  b.ox = x - hp.x; b.oz = z - hp.z;   // 相對洞心的初始偏移，隨時間收斂到 0
+  b.vy = 0; b.py = dishY(Math.hypot(x,z)) + BALL_R;
+  b.capT = now;
+}
+function stepCapture(b, dt, now){
+  const h = b.hole, hp = holeWorldPos(h);
+  // 水平：0.25 秒內滑進洞心，之後鎖定跟著洞（轉盤）移動 → 球會確實卡在洞內
+  const t = Math.min((now - b.capT) / 250, 1);
+  b.x = hp.x + b.ox * (1 - t);
+  b.z = hp.z + b.oz * (1 - t);
+  // 垂直自由落體，落到洞底反彈一下再坐定
+  b.vy -= GRAV * dt; b.py += b.vy * dt;
+  const restY = dishY(h.r) + BALL_R - REST_DEPTH;
+  if(b.py <= restY){
+    b.py = restY;
+    if(b.vy < -1.2){ b.vy = -b.vy * 0.3; }
+    else if(now - b.capT > 350){ b.state = "landed"; onBallLanded(b, h); }
+    else b.vy = 0;
+  }
+  b.mesh.position.set(b.x, b.py, b.z);
+  // 保險：入洞流程最多 1.5 秒
+  if(b.state === "capturing" && now - b.capT > 1500){ b.state = "landed"; onBallLanded(b, h); }
 }
 function removeBall(b){
   scene.remove(b.mesh);
@@ -676,24 +766,6 @@ function removeBall(b){
 }
 function relaunch(ballIndex){
   if(S.phase === "balls" || S.phase === "spin") launchBall(ballIndex);
-}
-function updateSinking(now){
-  balls.forEach(b=>{
-    if(b.state === "sinking" && b.hole){
-      const hp = holeWorldPos(b.hole);
-      const t = Math.min((now - b.sinkT)/600, 1);
-      b.mesh.position.set(
-        b.x + (hp.x - b.x)*t,
-        dishY(b.hole.r) + BALL_R - t*0.55,
-        b.z + (hp.z - b.z)*t
-      );
-    } else if(b.state === "landed" && b.hole){
-      const hp = holeWorldPos(b.hole);
-      b.mesh.position.set(hp.x, hp.y + BALL_R - 0.55, hp.z);
-    } else if(b.state === "sinking" && !b.hole){
-      b.mesh.position.y -= 0.05; // 回收洞下沉
-    }
-  });
 }
 
 /* ---------------- 回合流程 ---------------- */
@@ -745,7 +817,7 @@ function onBallLanded(b, h){
     S.ball4Hole = h.num;
     // 第五球發射前：開放 A~D 旋轉嘗試（5 秒窗口）
     S.phase = "spin"; S.spinWindow = true;
-    setStatus("按住 A~D 並按 BET 可嘗試旋轉區塊（1/10 機率），5 秒後發射第 5 球");
+    setStatus("可按 A~D 旋轉區塊，5 秒後發射第 5 球");
     schedule(()=>{
       S.spinWindow = false; S.phase = "balls";
       fireNext();
@@ -825,46 +897,50 @@ function scoreRound(){
 }
 
 /* ---------------- 輸入事件 ---------------- */
+// A~D 按下直接順時針旋轉對應的 2x2 區塊
 ["A","B","C","D"].forEach(q=>{
   const btn = $("btn"+q);
-  const down = e => { e.preventDefault(); heldQuad = q; btn.classList.add("held"); };
-  const up = () => { if(heldQuad === q) heldQuad = null; btn.classList.remove("held"); };
+  const down = e => { e.preventDefault(); btn.classList.add("held"); rotateQuad(q); };
+  const up = () => btn.classList.remove("held");
   btn.addEventListener("mousedown", down);
   btn.addEventListener("touchstart", down, {passive:false});
   btn.addEventListener("mouseup", up); btn.addEventListener("mouseleave", up);
   btn.addEventListener("touchend", up);
 });
-let betHoldTimer = null;
-function betAction(){
-  if(S.spinWindow && heldQuad){ tryQuadSpin(); return; }
-  placeBet();
+function placeBetN(n){
+  for(let i = 0; i < n; i++){
+    if(!S.bettingOpen || S.credits <= 0) break;
+    placeBet();
+  }
 }
-const betBtn = $("betBtn");
-betBtn.addEventListener("mousedown", e=>{
-  e.preventDefault(); betAction();
-  betHoldTimer = setInterval(()=>{ if(S.bettingOpen && !heldQuad) placeBet(); }, 80);
-});
-betBtn.addEventListener("touchstart", e=>{
-  e.preventDefault(); betAction();
-  betHoldTimer = setInterval(()=>{ if(S.bettingOpen && !heldQuad) placeBet(); }, 80);
-}, {passive:false});
-["mouseup","mouseleave","touchend"].forEach(ev=>
-  betBtn.addEventListener(ev, ()=>{ clearInterval(betHoldTimer); }));
+function bindBetButton(btn, n){
+  let holdTimer = null;
+  const down = e => {
+    e.preventDefault(); placeBetN(n);
+    holdTimer = setInterval(()=>{ if(S.bettingOpen) placeBetN(n); }, n === 1 ? 80 : 200);
+  };
+  const up = () => clearInterval(holdTimer);
+  btn.addEventListener("mousedown", down);
+  btn.addEventListener("touchstart", down, {passive:false});
+  ["mouseup","mouseleave","touchend"].forEach(ev => btn.addEventListener(ev, up));
+}
+bindBetButton($("betBtn1"), 1);
+bindBetButton($("betBtn10"), 10);
 $("creditBtn").addEventListener("click", ()=>{
   S.credits += 1000; refreshScores();
 });
 window.addEventListener("keydown", e=>{
   const k = e.key.toUpperCase();
-  if(["A","B","C","D"].includes(k)){ heldQuad = k; $("btn"+k).classList.add("held"); }
-  if(e.code === "Space" && !e.repeat){ e.preventDefault(); betAction(); }
-  if(e.code === "Space" && e.repeat && S.bettingOpen && !heldQuad){ e.preventDefault(); placeBet(); }
+  if(["A","B","C","D"].includes(k) && !e.repeat){
+    $("btn"+k).classList.add("held");
+    rotateQuad(k);
+  }
+  if(e.code === "Space"){ e.preventDefault(); placeBetN(1); }
+  if(e.code === "Enter"){ e.preventDefault(); placeBetN(10); }
 });
 window.addEventListener("keyup", e=>{
   const k = e.key.toUpperCase();
-  if(["A","B","C","D"].includes(k)){
-    if(heldQuad === k) heldQuad = null;
-    $("btn"+k).classList.remove("held");
-  }
+  if(["A","B","C","D"].includes(k)) $("btn"+k).classList.remove("held");
 });
 
 /* ---------------- 分割拉桿 ---------------- */
@@ -904,8 +980,15 @@ function animate(now){
   const dt = Math.min((now - lastT)/1000, 0.033);
   lastT = now;
   wheel.rotation.y -= WHEEL_W * dt;      // 由上往下看為順時針
-  balls.forEach(b => stepBall(b, dt, now));
-  updateSinking(now);
+  balls.forEach(b=>{
+    if(b.state === "rolling") stepBall(b, dt, now);
+    else if(b.state === "capturing") stepCapture(b, dt, now);
+    else if(b.state === "landed" && b.hole){
+      const hp = holeWorldPos(b.hole);
+      b.mesh.position.set(hp.x, hp.y + BALL_R - REST_DEPTH, hp.z);
+    }
+    else if(b.state === "recycling") b.mesh.position.y -= 3*dt;
+  });
   controls.update();
   renderer.render(scene, camera);
 }
