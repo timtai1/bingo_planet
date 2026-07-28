@@ -26,6 +26,15 @@
   #wheelPane{position:relative;flex:0 0 45%;min-width:200px;background:#000;}
   #wheelCanvas{width:100%;height:100%;display:block;}
   #wheelHint{position:absolute;left:8px;bottom:6px;font-size:10px;color:#4af;opacity:.7;}
+  /* 左上角：倒數計時 + 發球進度 */
+  #hud{position:absolute;top:10px;left:10px;display:flex;align-items:center;gap:12px;z-index:5;}
+  #countdown{font-size:clamp(24px,4vh,40px);font-weight:900;min-width:1.6em;text-align:center;
+    color:var(--neon-yellow);text-shadow:0 0 12px #f80,2px 2px 0 #000;font-family:monospace;}
+  #ballDots{display:flex;gap:7px;align-items:center;}
+  .ballDot{width:clamp(14px,2.4vh,20px);height:clamp(14px,2.4vh,20px);border-radius:50%;
+    background:radial-gradient(circle at 35% 30%,#ffffff,#8899bb);
+    border:1px solid #aaeeff;opacity:.22;transition:opacity .3s;}
+  .ballDot.fired{opacity:1;box-shadow:0 0 10px #ccffff;}
 
   /* ---------- 分隔拉桿 ---------- */
   .vsplit{flex:0 0 6px;cursor:col-resize;background:linear-gradient(180deg,#123,#28f,#123);}
@@ -172,6 +181,13 @@
 <div id="app">
   <div id="wheelPane">
     <canvas id="wheelCanvas"></canvas>
+    <div id="hud">
+      <div id="countdown"></div>
+      <div id="ballDots">
+        <div class="ballDot"></div><div class="ballDot"></div><div class="ballDot"></div>
+        <div class="ballDot"></div><div class="ballDot"></div>
+      </div>
+    </div>
     <div id="wheelHint">滑鼠拖曳旋轉視角 / 滾輪縮放</div>
   </div>
   <div class="vsplit" id="vsplit"></div>
@@ -793,14 +809,31 @@ function startRound(){
   S.plusOneCount = 0; S.plusLit.clear();
   S.bettingOpen = true; S.spinWindow = false;
   refreshScores(); refreshBonusUI(); refreshCard();
-  setStatus(S.freeGame ? "免費局進行中（沿用上局等級）" : "下注中：第三球入洞前可按 BET");
-  // 前三球每 5 秒發射一顆
-  fireNext();
+  updateBallDots();
+  // 開局先倒數 30 秒：玩家可下注、按 A~D 調整數字位置
+  S.phase = "countdown";
+  let cd = 30;
+  $("countdown").textContent = cd;
+  setStatus((S.freeGame ? "免費局（沿用上局等級）" : "倒數 30 秒") + "：可下注、按 A~D 旋轉區塊");
+  const cdTimer = setInterval(()=>{
+    cd--;
+    $("countdown").textContent = cd > 0 ? cd : "";
+    if(cd <= 0){
+      clearInterval(cdTimer);
+      S.phase = "balls";
+      fireNext();          // 之後前三球每 5 秒發射一顆
+    }
+  }, 1000);
+  timers.push(cdTimer);
+}
+function updateBallDots(){
+  document.querySelectorAll(".ballDot").forEach((d,i)=>d.classList.toggle("fired", i < launched));
 }
 function fireNext(){
   launched++;
   if(launched > 5) return;
   launchBall(launched);
+  updateBallDots();
   setStatus("第 " + launched + " 球發射" + (S.bettingOpen ? "，仍可下注" : ""));
   if(launched < 3) schedule(fireNext, BALL_INTERVAL);
 }
