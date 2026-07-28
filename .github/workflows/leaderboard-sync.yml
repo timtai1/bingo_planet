@@ -1,0 +1,56 @@
+name: leaderboard-sync
+
+# 排行榜同步：把 jsonblob 收件匣的成績合併進 repo 的 leaderboard.json（永久保存），
+# 並回寫 blob 延長壽命；blob 過期時自動以 leaderboard.json 為種子重建並更新 lb-config.json
+on:
+  schedule:
+    - cron: "23 */6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Sync leaderboard
+        run: |
+          set -e
+          API=$(jq -r .api lb-config.json)
+          echo "inbox: $API"
+          if curl -sf "$API" -o /tmp/blob.json && jq -e 'type == "object"' /tmp/blob.json > /dev/null; then
+            echo "blob alive"
+          else
+            echo "blob missing, recreating from leaderboard.json"
+            LOC=$(curl -s -D - -o /dev/null -X POST "https://jsonblob.com/api/jsonBlob" \
+              -H "Content-Type: application/json" --data-binary @leaderboard.json \
+              | grep -i '^location:' | tr -d '\r' | awk '{print $2}')
+            API="https://jsonblob.com${LOC}"
+            jq -n --arg api "$API" '{api:$api}' > lb-config.json
+            cp leaderboard.json /tmp/blob.json
+            echo "new inbox: $API"
+          fi
+          # 合併：同名玩家取 ts（最後更新時間）較新者，blob 內容在平手時優先
+          jq -s 'reduce (.[0], .[1] | to_entries[]) as $e ({};
+                 if (.[$e.key] == null) or (($e.value.ts // 0) >= (.[$e.key].ts // 0))
+                 then .[$e.key] = $e.value else . end)' \
+             leaderboard.json /tmp/blob.json > /tmp/merged.json
+          cp /tmp/merged.json leaderboard.json
+          # 回寫 blob：內容去重 + 延長 blob 壽命（jsonblob 寫入後可再存活一天）
+          curl -s -X PUT "$API" -H "Content-Type: application/json" \
+            --data-binary @leaderboard.json -o /dev/null
+
+      - name: Commit if changed
+        run: |
+          git config user.name "leaderboard-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add leaderboard.json lb-config.json
+          if git diff --cached --quiet; then
+            echo "no changes"
+          else
+            git commit -m "sync leaderboard"
+            git push
+          fi
