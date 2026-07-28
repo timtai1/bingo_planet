@@ -375,8 +375,9 @@ const S = {
   level: 1,                 // 押注等級 1~10
   oddsUpStage: 0,           // 0 / 1(1UP) / 2(2UP)，第四球進黃框洞才生效（派彩等級 +1/+2）
   cornerStage: 0,           // 0 / 1(200) / 2(500)，四角號碼齊才給分
-  bonusYellow: false,       // BONUS GAME 黃燈：第四球進黃框洞則下一局免費
-  bonusRed: false,          // BONUS GAME 紅燈：第四球進紅框洞則下一局免費
+  bonusYellow: false,       // BONUS GAME 黃燈：第四球（黃球）進黃框洞則下一局免費
+  bonusRed: false,          // BONUS GAME 紅燈：第四球（黃球）進紅框洞則下一局免費
+  ball4Yellow: false,       // 第四球是否為黃球（70% 機率），白球不觸發第四球相關獎勵
   plusH: false,             // PLUS ONE 橫向：橫向 2 個以上連續號碼時連線數 +1
   plusV: false,             // PLUS ONE 縱向
   bettingOpen: false,       // 只在開局 30 秒倒數期間可下注
@@ -508,7 +509,9 @@ function placeBet(n){
   if(S.credits < n){ setStatus("CREDITS 不足，請按 CREDITS +100"); return; }
   S.credits -= n; S.bet += n;
   meteorFx();
-  if(S.level < 10 && Math.random() < upgradeChance(S.level)) S.level++;
+  // BET 10 的升級機率是 BET 1 的兩倍
+  const upChance = upgradeChance(S.level) * (n === 10 ? 2 : 1);
+  if(S.level < 10 && Math.random() < upChance) S.level++;
   if(n === 10){
     if(!S.plusH && Math.random() < P_PLUS_H){ S.plusH = true; showMsg("PLUS ONE 橫向 !", 1500); }
     if(!S.plusV && Math.random() < P_PLUS_V){ S.plusV = true; showMsg("PLUS ONE 縱向 !", 1500); }
@@ -744,12 +747,17 @@ const balls = [];  // {mesh,x,z,vx,vz,state:"rolling"|"sinking"|"landed",hole,la
 
 function launchBall(ballIndex){
   const mesh = new THREE.Mesh(ballGeo, ballMat.clone());
+  // 第四球若為黃球，以黃色外觀呈現
+  if(ballIndex === 4 && S.ball4Yellow){
+    mesh.material.color.set(0xffd23a);
+    mesh.material.emissive.set(0x775500);
+  }
   scene.add(mesh);
-  const a = Math.random()*Math.PI*2;
+  const a = -Math.PI/2;                 // 固定從畫面上方發球
   const r0 = DISH_R - 0.7;
   const x = Math.cos(a)*r0, z = Math.sin(a)*r0;
-  // 發射方向 = 轉盤表面切線方向（順著盤轉，往最外圈洞滾去）
-  const speed = 8.5 + Math.random()*1.5;
+  // 發射方向 = 轉盤表面切線方向（順著盤轉，往最外圈洞滾去），初速為原設計的兩倍
+  const speed = (8.5 + Math.random()*1.5) * 2;
   const tx = -Math.sin(a), tz = Math.cos(a);      // 切線
   const dir = wheelSurfaceVel(x,z);               // 與盤面同向
   const dot = dir.x*tx + dir.z*tz;
@@ -891,7 +899,7 @@ function clearTimers(){ timers.forEach(clearTimeout); timers = []; }
 
 function startRound(){
   S.phase = "balls";
-  S.landedBalls = []; S.ball4Hole = 0; S.win = 0;
+  S.landedBalls = []; S.ball4Hole = 0; S.ball4Yellow = false; S.win = 0;
   launched = 0;
   holes.forEach(h => h.occupied = false);
   $("line3").classList.remove("won"); $("line4").classList.remove("won"); $("line5").classList.remove("won");
@@ -947,12 +955,15 @@ function updateBallDots(){
 function fireNext(){
   launched++;
   if(launched > 5) return;
+  if(launched === 4) S.ball4Yellow = Math.random() < 0.7;   // 第四球 70% 機率為黃球
   launchBall(launched);
   updateBallDots();
   if(launched === 4){
     // 第四球飛行中：可付費購買旋轉機會（成功率 10%）
     S.paidSpinPhase = true;
-    setStatus("第 4 球飛行中：按 BET 購買旋轉機會，再按 A~D 旋轉（成功率 10%）");
+    showMsg(S.ball4Yellow ? "第 4 球：黃球！" : "第 4 球：白球", 2000);
+    setStatus("第 4 球（" + (S.ball4Yellow ? "黃球" : "白球") +
+      "）飛行中：按 BET 購買旋轉機會，再按 A~D 旋轉（成功率 10%）");
   } else {
     setStatus("第 " + launched + " 球發射");
   }
@@ -1009,9 +1020,9 @@ function scoreRound(){
   }
   let total = 0;
   const counts = {3:0,4:0,5:0};
-  // ODDS UP：燈亮不代表中獎，第四球進黃框洞（5/15/25）才生效，派彩等級提升 1 或 2 級
+  // ODDS UP：燈亮不代表中獎，第四球必須是「黃球」且進黃框洞（5/15/25）才生效，派彩等級提升 1 或 2 級
   let payLevel = S.level;
-  if(S.oddsUpStage > 0 && YELLOW_HOLES.has(S.ball4Hole)){
+  if(S.oddsUpStage > 0 && S.ball4Yellow && YELLOW_HOLES.has(S.ball4Hole)){
     payLevel = Math.min(10, payLevel + S.oddsUpStage);
     showMsg("ODDS " + S.oddsUpStage + "UP 生效！以等級 " + payLevel + " 派彩", 3000);
   }
@@ -1050,8 +1061,8 @@ function scoreRound(){
       total += bonus;
       showMsg("4CORNER +" + bonus + " !", 2500);
     }
-    // BONUS GAME：燈亮且第四球進對應色框的洞才中獎（黃框 5/15/25、紅框 10/20），下一局免費
-    if(S.ball4Hole){
+    // BONUS GAME：燈亮且第四球是「黃球」並進對應色框的洞才中獎（黃框 5/15/25、紅框 10/20），下一局免費
+    if(S.ball4Hole && S.ball4Yellow){
       const hitYellow = S.bonusYellow && YELLOW_HOLES.has(S.ball4Hole);
       const hitRed = S.bonusRed && RED_HOLES.has(S.ball4Hole);
       if(hitYellow || hitRed){
