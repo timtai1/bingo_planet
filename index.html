@@ -456,10 +456,11 @@ function rotateQuad(q){
     const next = (k+1) % 4;             // 順時針：左上到右上到右下到左下
     const dx = rects[next].left - rects[k].left;
     const dy = rects[next].top  - rects[k].top;
-    const numEl = cellEls[cellIdx].querySelector(".num");
-    numEl.style.transition = "transform 1s ease-in-out";
-    numEl.style.transform = "translate(" + dx + "px," + dy + "px)";
-    cellEls[cellIdx].style.zIndex = 5;
+    // 整個格子（含外框、底色、亮燈狀態）一起平移，不只數字
+    const el = cellEls[cellIdx];
+    el.style.transition = "transform 1s ease-in-out";
+    el.style.transform = "translate(" + dx + "px," + dy + "px)";
+    el.style.zIndex = 5;
   });
   setTimeout(()=>{
     // 動畫結束後把數值真正換位並復原位移
@@ -468,9 +469,9 @@ function rotateQuad(q){
       S.card[idx[(k+1)%4]] = vals[k];
     });
     idx.forEach(cellIdx => {
-      const numEl = cellEls[cellIdx].querySelector(".num");
-      numEl.style.transition = "none"; numEl.style.transform = "none";
-      cellEls[cellIdx].style.zIndex = "";
+      const el = cellEls[cellIdx];
+      el.style.transition = "none"; el.style.transform = "none";
+      el.style.zIndex = "";
     });
     S.rotating = false;
     refreshCard();
@@ -660,13 +661,13 @@ function launchBall(ballIndex){
   return b;
 }
 function wheelSurfaceVel(x,z){
-  // 轉盤以 -WHEEL_W 繞 Y 軸旋轉（由上往下看為順時針）
-  return {x: WHEEL_W*z, z: -WHEEL_W*x};
+  // 轉盤繞 Y 軸以 rotation.y 遞減旋轉，盤面材質點的世界角速度為 +WHEEL_W
+  // （世界角 = 本地角 - rotation.y），故表面速度 = WHEEL_W * (-z, x)
+  return {x: -WHEEL_W*z, z: WHEEL_W*x};
 }
 function holeWorldPos(h){
-  const a = h.ang + wheel.rotation.y * -1; // 洞跟著盤轉：世界角 = 本地角 - 盤旋轉量的反向
-  // wheel.rotation.y 為負值遞減，所以世界角 = h.ang + wheel.rotation.y
-  const wa = h.ang + wheel.rotation.y;
+  // three.js 繞 Y 旋轉 θ：世界角 = 本地角 - θ（rotation.y 遞減 → 世界角遞增 → 俯視順時針）
+  const wa = h.ang - wheel.rotation.y;
   return {x: Math.cos(wa)*h.r, z: Math.sin(wa)*h.r, y: dishY(h.r)};
 }
 
