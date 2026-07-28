@@ -92,9 +92,10 @@
   .cell .num{font-size:clamp(12px,2.4vh,24px);font-weight:900;color:var(--neon-cyan);
     text-shadow:0 0 6px var(--neon-blue),0 0 12px #06f;transition:none;position:relative;z-index:2;}
   .cell.cross{background:#0a1655;border-color:#3a6cff;}
-  .cell.marked{background:radial-gradient(circle,#0c53d6 0%,#062a90 80%);border-color:#7fd0ff;
-    box-shadow:0 0 10px #3af,inset 0 0 8px #6cf;}
-  .cell.marked .num{color:#ffffff;text-shadow:0 0 8px #fff,0 0 16px #4af;}
+  /* 進洞的號碼用紅色調，比較明顯 */
+  .cell.marked{background:radial-gradient(circle,#d92f1c 0%,#7a0e06 80%);border-color:#ff9a8a;
+    box-shadow:0 0 12px #f43,inset 0 0 8px #f86;}
+  .cell.marked .num{color:#ffffff;text-shadow:0 0 8px #fff,0 0 16px #f44;}
   .cell.plusone{background:radial-gradient(circle,#1f9a2f 0%,#063a10 85%);border-color:#5f6;
     box-shadow:0 0 12px #4f6;}
   .cell.plusone .num{color:#eaffea;text-shadow:0 0 8px #6f6;}
@@ -200,6 +201,18 @@
     .betBtn{width:min(7.5vh,56px);height:min(7.5vh,56px);font-size:12px;}
     #creditBtn{padding:6px 8px;font-size:10px;}
     #countdown{font-size:clamp(20px,3.2vh,32px);}
+    /* 直向以螢幕寬度為基準縮小字型，避免 Bingo 畫面溢出 */
+    #title{font-size:clamp(11px,4vw,18px);letter-spacing:2px;}
+    .cell .num{font-size:clamp(10px,4.2vw,18px);}
+    .quadMark{font-size:clamp(22px,13vw,56px);}
+    .oddsRow div{font-size:clamp(8px,3vw,13px);letter-spacing:0;}
+    #oddsHead div{font-size:clamp(6px,2vw,9px);}
+    .lineBox{font-size:clamp(6px,2vw,9px);}
+    #oddsX{font-size:clamp(9px,3vw,13px);}
+    .bonus .label{font-size:clamp(7px,2.4vw,10px);}
+    #infoBar{font-size:clamp(8px,2.8vw,12px);gap:5px;}
+    #meteor{width:44px;height:30px;}
+    #cardTitle{font-size:clamp(8px,2.6vw,11px);}
   }
 </style>
 </head>
@@ -295,7 +308,7 @@
       </div>
       <div class="btnWrap"><button class="betBtn" id="betBtn1">BET<br>1</button><div class="btnLabel">押注 1 (Space)</div></div>
       <div class="btnWrap"><button class="betBtn bet10" id="betBtn10">BET<br>10</button><div class="btnLabel">押注 10 (Enter)</div></div>
-      <div class="btnWrap"><button id="creditBtn">CREDITS<br>+1000</button></div>
+      <div class="btnWrap"><button id="creditBtn">CREDITS<br>+100</button></div>
     </div>
   </div>
 </div>
@@ -640,7 +653,7 @@ function numberPlate(num, color){
   ctx.fillStyle = color; ctx.shadowColor = color; ctx.shadowBlur = 22;
   ctx.fillText(String(num), 64, 70);
   const mat = new THREE.MeshBasicMaterial({map:new THREE.CanvasTexture(cv), transparent:true, depthWrite:false});
-  const m = new THREE.Mesh(new THREE.PlaneGeometry(1.7, 1.7), mat);
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(0.85, 0.85), mat);
   m.rotation.x = -Math.PI/2;   // 平躺於盤面，文字上緣朝盤中心（由外側視角可讀）
   return m;
 }
@@ -681,7 +694,7 @@ function surfaceGroup(radius, ang){
       ring.rotation.x = Math.PI/2;
       ring.position.y = 0.03; g.add(ring);
       // 編號牌錨定在自己所在半徑的表面（避免因鍋面曲率沉入盤面）
-      const pg = surfaceGroup(rg.radius + HOLE_R + 0.95, ang);
+      const pg = surfaceGroup(rg.radius + HOLE_R + 0.48, ang);
       const plate = numberPlate(num, yellow ? "#ffd60a" : "#ff5555");
       plate.position.y = 0.06;
       pg.add(plate);
@@ -1043,7 +1056,7 @@ function bindBetButton(btn, n){
 bindBetButton($("betBtn1"), 1);
 bindBetButton($("betBtn10"), 10);
 $("creditBtn").addEventListener("click", ()=>{
-  S.credits += 1000; refreshScores();
+  S.credits += 100; refreshScores();
 });
 window.addEventListener("keydown", e=>{
   const k = e.key.toUpperCase();
@@ -1115,7 +1128,7 @@ function animate(now){
   lastT = now;
   wheel.rotation.y -= WHEEL_W * dt;      // 由上往下看為順時針
   balls.forEach(b=>{
-    if(b.state === "rolling") stepBall(b, dt, now);
+    if(b.state === "rolling") stepBall(b, dt*2, now);   // 球滾動以 2 倍速模擬
     else if(b.state === "capturing") stepCapture(b, dt, now);
     else if(b.state === "landed" && b.hole){
       const hp = holeWorldPos(b.hole);
