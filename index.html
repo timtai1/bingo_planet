@@ -42,6 +42,7 @@
     font-size:clamp(16px,3.5vh,30px);font-weight:900;color:var(--neon-yellow);text-align:center;
     text-shadow:0 0 14px #f80,2px 2px 0 #000;pointer-events:none;display:none;white-space:nowrap;
     animation:bonusGlow .5s alternate infinite;}
+  #spinMsg.big{font-size:clamp(32px,7vh,60px);}   /* 開局 30 秒倒數：字型大一倍 */
 
   /* ---------- 分隔拉桿 ---------- */
   .vsplit{flex:0 0 6px;cursor:col-resize;background:linear-gradient(180deg,#123,#28f,#123);}
@@ -102,9 +103,6 @@
   .cell.marked{background:radial-gradient(circle,#d92f1c 0%,#7a0e06 80%);border-color:#ff9a8a;
     box-shadow:0 0 12px #f43,inset 0 0 8px #f86;}
   .cell.marked .num{color:#ffffff;text-shadow:0 0 8px #fff,0 0 16px #f44;}
-  .cell.plusone{background:radial-gradient(circle,#1f9a2f 0%,#063a10 85%);border-color:#5f6;
-    box-shadow:0 0 12px #4f6;}
-  .cell.plusone .num{color:#eaffea;text-shadow:0 0 8px #6f6;}
   .cell.lineWin{animation:lineFlash .3s alternate infinite;}
   @keyframes lineFlash{from{filter:brightness(1);}to{filter:brightness(2);}}
   /* 四象限的 A~D 呼吸標記：淡淡覆蓋各自的 2x2 區塊 */
@@ -239,6 +237,7 @@
     .ballDot{width:clamp(10px,1.8vh,15px);height:clamp(10px,1.8vh,15px);}
     #msg{font-size:clamp(12px,4.5vw,20px);}
     #spinMsg{font-size:clamp(12px,3.6vw,18px);}
+    #spinMsg.big{font-size:clamp(24px,7.2vw,36px);}
   }
 </style>
 </head>
@@ -247,7 +246,6 @@
   <div id="wheelPane">
     <canvas id="wheelCanvas"></canvas>
     <div id="hud">
-      <div id="countdown"></div>
       <div id="ballDots">
         <div class="ballDot"></div><div class="ballDot"></div><div class="ballDot"></div>
         <div class="ballDot"></div><div class="ballDot"></div>
@@ -262,7 +260,10 @@
       <div id="bonusRow">
         <div class="bonus" id="bnPlus">
           <div class="label">PLUS ONE</div>
-          <div class="ball"><div class="icon">✦</div><div style="font-size:9px;">+1</div></div>
+          <div class="ball">
+            <div class="tier" id="plusHTier">橫 +1</div>
+            <div class="tier" id="plusVTier">縱 +1</div>
+          </div>
         </div>
         <div class="bonus" id="bnCorner">
           <div class="label">4CORNER</div>
@@ -355,12 +356,16 @@ const PAYTABLE = [            // 依押注等級 1~10：[3連線, 4連線, 5連�
   [8,24,64],[16,48,128],[24,72,192],[32,96,256],[64,192,512],
   [128,384,1024],[256,768,2048],[512,1536,4096],[768,2304,6144],[1000,3000,10000]
 ];
-const P_PLUSONE = 1/500, P_CORNER = 1/10, P_BONUS = 1/10, P_ODDSUP = 1/500;
-// PLUS ONE 只送中心與其上下左右，最多 5 格（5x5 索引：12=中心, 7=上, 17=下, 11=左, 13=右）
-const PLUS_IDX = [12, 7, 17, 11, 13];
+// 獎勵擲骰機率（只在按 BET 10 時擲）
+const P_PLUS_H = 0.05, P_PLUS_V = 0.05;         // PLUS ONE 橫向 / 縱向
+const P_CORNER_200 = 0.20, P_CORNER_500 = 0.05; // 4CORNER 兩階段
+const P_BONUS_Y = 0.05, P_BONUS_R = 0.05;       // BONUS GAME 黃 / 紅
+const P_ODDSUP = 0.10;                          // ODDS UP 每次升一階
 // 升級機率：等級 1~2 為 1/30，等級 3 以上為 1/50
 const upgradeChance = lv => lv <= 2 ? 1/30 : 1/50;
-const YELLOW_HOLES = new Set([5,10,15,20,25]);
+// 洞框顏色：一般藍色，5/15/25 黃色，10/20 紅色
+const YELLOW_HOLES = new Set([5,15,25]);
+const RED_HOLES = new Set([10,20]);
 const BALL_INTERVAL = 5000;   // 前三球每 5 秒發射一顆
 const RESET_DELAY   = 10000;  // 結算後 10 秒重新開局
 
@@ -368,20 +373,22 @@ const RESET_DELAY   = 10000;  // 結算後 10 秒重新開局
 const S = {
   credits: 1000, paid: 0, win: 0, bet: 0, game: 1,
   level: 1,                 // 押注等級 1~10
-  oddsUpStage: 0,           // 0 / 1(1UP) / 2(2UP)
-  cornerStage: 0,           // 0 / 1(200) / 2(500)
-  bonusStage: 0,            // 0 / 1(紅洞) / 2(黃洞亦可)
-  plusOneCount: 0,
+  oddsUpStage: 0,           // 0 / 1(1UP) / 2(2UP)，第四球進黃框洞才生效（派彩等級 +1/+2）
+  cornerStage: 0,           // 0 / 1(200) / 2(500)，四角號碼齊才給分
+  bonusYellow: false,       // BONUS GAME 黃燈：第四球進黃框洞則下一局免費
+  bonusRed: false,          // BONUS GAME 紅燈：第四球進紅框洞則下一局免費
+  plusH: false,             // PLUS ONE 橫向：橫向 2 個以上連續號碼時連線數 +1
+  plusV: false,             // PLUS ONE 縱向
   bettingOpen: false,       // 只在開局 30 秒倒數期間可下注
   rotateFree: true,         // 開局到第三球入洞後 5 秒內可自由旋轉 A~D
   paidSpinPhase: false,     // 第四球飛行中：付費購買旋轉機會
   spinTokens: 0,            // 已購買的旋轉機會數
   freeGame: false,          // 本局為免費局
-  nextFree: false, nextFreeLevel: 1, nextFreeBet: 0,
+  nextFree: false, nextFreeLevel: 1, nextFreeBet: 0, nextFreeLights: null,
   landedBalls: [],          // 本局落入 1~25 的洞號（依序）
   ball4Hole: 0,             // 第四顆球的洞號（BONUS GAME 判定用）
   phase: "idle",            // idle / balls / spin / scoring / reset
-  card: [], cross: new Set(), plusLit: new Set(), rotating: false,
+  card: [], cross: new Set(), rotating: false,
 };
 
 /* ---------------- 賓果卡：1~25 隨機、中央十字固定 ---------------- */
@@ -458,15 +465,18 @@ function refreshScores(){
   const cur = $("odds_lv"+S.level); if(cur) cur.classList.add("cur");
 }
 function refreshBonusUI(){
-  $("bnPlus").querySelector(".ball").classList.toggle("active", S.plusOneCount > 0);
-  $("corner200").classList.toggle("lit", S.cornerStage >= 1);
-  $("corner500").classList.toggle("lit", S.cornerStage >= 2);
-  $("bonusRed").classList.toggle("lit", S.bonusStage >= 1);
-  $("bonusYellow").classList.toggle("lit", S.bonusStage >= 2);
-  $("odds1up").classList.toggle("lit", S.oddsUpStage >= 1);
-  $("odds2up").classList.toggle("lit", S.oddsUpStage >= 2);
+  $("plusHTier").classList.toggle("lit", S.plusH);
+  $("plusVTier").classList.toggle("lit", S.plusV);
+  // 500 亮時 200 熄掉，避免誤會；ODDS UP 同理
+  $("corner200").classList.toggle("lit", S.cornerStage === 1);
+  $("corner500").classList.toggle("lit", S.cornerStage === 2);
+  $("bonusRed").classList.toggle("lit", S.bonusRed);
+  $("bonusYellow").classList.toggle("lit", S.bonusYellow);
+  $("odds1up").classList.toggle("lit", S.oddsUpStage === 1);
+  $("odds2up").classList.toggle("lit", S.oddsUpStage === 2);
+  $("bnPlus").querySelector(".ball").classList.toggle("active", S.plusH || S.plusV);
   $("bnCorner").querySelector(".ball").classList.toggle("active", S.cornerStage > 0);
-  $("bnBonus").querySelector(".ball").classList.toggle("active", S.bonusStage > 0);
+  $("bnBonus").querySelector(".ball").classList.toggle("active", S.bonusYellow || S.bonusRed);
   $("bnOdds").querySelector(".ball").classList.toggle("active", S.oddsUpStage > 0);
 }
 function refreshCard(){
@@ -474,7 +484,6 @@ function refreshCard(){
   for(let i = 0; i < 25; i++){
     const n = S.card[i], el = cellEls[i];
     el.classList.toggle("marked", marked.has(n));
-    el.classList.toggle("plusone", S.plusLit.has(i) && !marked.has(n));
     el.querySelector(".num").textContent = n;
   }
 }
@@ -493,33 +502,26 @@ function meteorFx(){
 }
 
 /* ---------------- 押注 ---------------- */
-function placeBet(){
+// 一次押 n 點（免費局也可下注來提升押注等級）；獎勵燈只在 BET 10 時擲骰
+function placeBet(n){
   if(!S.bettingOpen || S.rotating) return;
-  if(S.freeGame) return;               // 免費局不需下注
-  if(S.credits <= 0){ setStatus("CREDITS 不足，請按 CREDITS +1000"); return; }
-  S.credits--; S.bet++;
+  if(S.credits < n){ setStatus("CREDITS 不足，請按 CREDITS +100"); return; }
+  S.credits -= n; S.bet += n;
   meteorFx();
-  // 每次押注獨立擲骰：升級 + 四大獎勵
   if(S.level < 10 && Math.random() < upgradeChance(S.level)) S.level++;
-  if(Math.random() < P_PLUSONE) triggerPlusOne();
-  if(Math.random() < P_CORNER && S.cornerStage < 2){ S.cornerStage++; showMsg("4CORNER " + (S.cornerStage===2?"500":"200") + " !", 1500); }
-  if(Math.random() < P_BONUS && S.bonusStage < 2){ S.bonusStage++; showMsg("BONUS GAME " + (S.bonusStage===2?"YELLOW":"RED") + " !", 1500); }
-  if(Math.random() < P_ODDSUP && S.oddsUpStage < 2){
-    S.oddsUpStage++;
-    S.level = Math.min(10, S.level + 1);
-    showMsg("ODDS " + S.oddsUpStage + "UP !", 2000);
+  if(n === 10){
+    if(!S.plusH && Math.random() < P_PLUS_H){ S.plusH = true; showMsg("PLUS ONE 橫向 !", 1500); }
+    if(!S.plusV && Math.random() < P_PLUS_V){ S.plusV = true; showMsg("PLUS ONE 縱向 !", 1500); }
+    if(S.cornerStage < 2 && Math.random() < P_CORNER_500){ S.cornerStage = 2; showMsg("4CORNER 500 !", 1500); }
+    else if(S.cornerStage < 1 && Math.random() < P_CORNER_200){ S.cornerStage = 1; showMsg("4CORNER 200 !", 1500); }
+    if(!S.bonusYellow && Math.random() < P_BONUS_Y){ S.bonusYellow = true; showMsg("BONUS GAME 黃 !", 1500); }
+    if(!S.bonusRed && Math.random() < P_BONUS_R){ S.bonusRed = true; showMsg("BONUS GAME 紅 !", 1500); }
+    if(S.oddsUpStage < 2 && Math.random() < P_ODDSUP){
+      S.oddsUpStage++;
+      showMsg("ODDS " + S.oddsUpStage + "UP !", 2000);
+    }
   }
   refreshScores(); refreshBonusUI();
-}
-function triggerPlusOne(){
-  // 只點亮中心與其上下左右尚未點亮的一格（最多 5 格）
-  const candidates = PLUS_IDX.filter(i => !S.plusLit.has(i));
-  if(!candidates.length) return;
-  const pick = candidates[Math.floor(Math.random()*candidates.length)];
-  S.plusLit.add(pick);
-  S.plusOneCount++;
-  showMsg("PLUS ONE !", 1500);
-  refreshCard(); refreshBonusUI();
 }
 
 /* ---------------- 四區塊旋轉 ---------------- */
@@ -703,7 +705,10 @@ function surfaceGroup(radius, ang){
     for(let i = 0; i < rg.count; i++){
       const num = rg.start + i;
       const ang = holeAngle(rg, i);
-      const yellow = YELLOW_HOLES.has(num);
+      // 洞框顏色：一般藍色，5/15/25 黃色，10/20 紅色
+      const yellow = YELLOW_HOLES.has(num), red = RED_HOLES.has(num);
+      const ringCol = yellow ? 0xffcc00 : (red ? 0xff2222 : 0x2277ff);
+      const numCol  = yellow ? "#ffd60a" : (red ? "#ff5555" : "#55bbff");
       // 依鍋面法線建立局部座標系，洞環與編號才會貼平所在位置的盤面斜率
       const g = surfaceGroup(rg.radius, ang);
       wheel.add(g);
@@ -714,17 +719,16 @@ function surfaceGroup(radius, ang){
       cup.position.y = -0.48; g.add(cup);
       const bottom = new THREE.Mesh(new THREE.CircleGeometry(HOLE_R*0.85, 20), cupMat);
       bottom.rotation.x = -Math.PI/2; bottom.position.y = -0.97; g.add(bottom);
-      // 發光洞環：5/10/15/20/25 黃燈，其餘紅燈
-      const col = yellow ? 0xffcc00 : 0xff2222;
+      // 發光洞環
       const ring = new THREE.Mesh(
         new THREE.TorusGeometry(HOLE_R+0.08, 0.09, 8, 28),
-        new THREE.MeshStandardMaterial({color:col, emissive:col, emissiveIntensity:0.9})
+        new THREE.MeshStandardMaterial({color:ringCol, emissive:ringCol, emissiveIntensity:0.9})
       );
       ring.rotation.x = Math.PI/2;
       ring.position.y = 0.03; g.add(ring);
       // 編號牌錨定在自己所在半徑的表面（避免因鍋面曲率沉入盤面）
       const pg = surfaceGroup(rg.radius + HOLE_R + 0.48, ang);
-      const plate = numberPlate(num, yellow ? "#ffd60a" : "#ff5555");
+      const plate = numberPlate(num, numCol);
       plate.position.y = 0.06;
       pg.add(plate);
       wheel.add(pg);
@@ -894,29 +898,41 @@ function startRound(){
   cellEls.forEach(e => e.classList.remove("lineWin"));
 
   if(S.nextFree){
+    // 免費局：贈送前一局的獎勵燈號與等級，仍可下注提升等級
     S.freeGame = true; S.nextFree = false;
     S.level = S.nextFreeLevel; S.bet = S.nextFreeBet;
+    const L = S.nextFreeLights || {};
+    S.plusH = !!L.plusH; S.plusV = !!L.plusV;
+    S.cornerStage = L.cornerStage || 0;
+    S.bonusYellow = !!L.bonusYellow; S.bonusRed = !!L.bonusRed;
+    S.oddsUpStage = L.oddsUpStage || 0;
     showMsg("FREE GAME !<br>等級 " + S.level, 2500);
   } else {
+    // 一般新局：所有獎勵燈號重置
     S.freeGame = false;
     S.bet = 0; S.level = 1;
-    S.oddsUpStage = 0; S.cornerStage = 0; S.bonusStage = 0;
+    S.oddsUpStage = 0; S.cornerStage = 0;
+    S.bonusYellow = false; S.bonusRed = false;
+    S.plusH = false; S.plusV = false;
   }
-  S.plusOneCount = 0; S.plusLit.clear();
   S.bettingOpen = true; S.rotateFree = true;
   S.paidSpinPhase = false; S.spinTokens = 0;
   refreshScores(); refreshBonusUI(); refreshCard();
   updateBallDots();
-  // 開局先倒數 30 秒：只有這段時間可以下注，也可自由按 A~D 調整數字位置
+  // 開局先倒數 30 秒（顯示在轉盤中央）：只有這段時間可以下注，也可自由按 A~D 調整數字位置
   S.phase = "countdown";
   let cd = 30;
-  $("countdown").textContent = cd;
-  setStatus((S.freeGame ? "免費局（沿用上局等級）" : "倒數 30 秒") + "：可下注、按 A~D 旋轉區塊");
+  const sm = $("spinMsg");
+  sm.classList.add("big"); sm.style.display = "block";
+  sm.textContent = "下注倒數 " + cd + " 秒";
+  setStatus((S.freeGame ? "免費局（沿用上局獎勵與等級）" : "倒數 30 秒") + "：可下注、按 A~D 旋轉區塊");
   const cdTimer = setInterval(()=>{
     cd--;
-    $("countdown").textContent = cd > 0 ? cd : "";
-    if(cd <= 0){
+    if(cd > 0){
+      sm.textContent = "下注倒數 " + cd + " 秒";
+    } else {
       clearInterval(cdTimer);
+      sm.style.display = "none"; sm.classList.remove("big");
       S.bettingOpen = false;         // 開始發球後即不能下注
       S.phase = "balls";
       setStatus("下注截止，開始發球");
@@ -989,15 +1005,34 @@ function scoreRound(){
   const marked = new Set(S.landedBalls);
   const markedIdx = new Set();
   for(let i = 0; i < 25; i++){
-    if(marked.has(S.card[i]) || S.plusLit.has(i)) markedIdx.add(i);
+    if(marked.has(S.card[i])) markedIdx.add(i);
   }
   let total = 0;
   const counts = {3:0,4:0,5:0};
-  const pay = PAYTABLE[S.level-1];
+  // ODDS UP：燈亮不代表中獎，第四球進黃框洞（5/15/25）才生效，派彩等級提升 1 或 2 級
+  let payLevel = S.level;
+  if(S.oddsUpStage > 0 && YELLOW_HOLES.has(S.ball4Hole)){
+    payLevel = Math.min(10, payLevel + S.oddsUpStage);
+    showMsg("ODDS " + S.oddsUpStage + "UP 生效！以等級 " + payLevel + " 派彩", 3000);
+  }
+  const pay = PAYTABLE[payLevel-1];
   const winCells = new Set();
+  // 至少 2 個「連續」亮格才符合 PLUS ONE 的加一條件
+  const hasRun2 = line => {
+    let run = 0;
+    for(const i of line){
+      run = markedIdx.has(i) ? run + 1 : 0;
+      if(run >= 2) return true;
+    }
+    return false;
+  };
   if(S.bet > 0 || S.freeGame){
-    LINES.forEach(line=>{
-      const c = line.filter(i => markedIdx.has(i)).length;
+    LINES.forEach((line, li)=>{
+      let c = line.filter(i => markedIdx.has(i)).length;
+      // PLUS ONE：橫向燈對橫排、縱向燈對直排，各自把連線數 +1（兩個連續號碼就算 3 連線）
+      const isRow = li < 5, isCol = li >= 5 && li < 10;
+      if(isRow && S.plusH && hasRun2(line)) c = Math.min(5, c + 1);
+      if(isCol && S.plusV && hasRun2(line)) c = Math.min(5, c + 1);
       if(c >= 3){
         counts[c]++;
         total += pay[c-3];
@@ -1008,19 +1043,22 @@ function scoreRound(){
     if(counts[4]) $("line4").classList.add("won");
     if(counts[5]) $("line5").classList.add("won");
     winCells.forEach(i => cellEls[i].classList.add("lineWin"));
-    // 4CORNER：四角全亮
+    // 4CORNER：燈亮且四角號碼全中才給分（500 亮時只給 500）
     const corners = [0,4,20,24];
     if(S.cornerStage > 0 && corners.every(i => markedIdx.has(i))){
       const bonus = S.cornerStage === 2 ? 500 : 200;
       total += bonus;
       showMsg("4CORNER +" + bonus + " !", 2500);
     }
-    // BONUS GAME：第四球洞色判定，下一局免費（等級沿用）
-    if(S.bonusStage > 0 && S.ball4Hole){
-      const isYellow = YELLOW_HOLES.has(S.ball4Hole);
-      const hit = (S.bonusStage >= 1 && !isYellow) || (S.bonusStage >= 2 && isYellow);
-      if(hit){
+    // BONUS GAME：燈亮且第四球進對應色框的洞才中獎（黃框 5/15/25、紅框 10/20），下一局免費
+    if(S.ball4Hole){
+      const hitYellow = S.bonusYellow && YELLOW_HOLES.has(S.ball4Hole);
+      const hitRed = S.bonusRed && RED_HOLES.has(S.ball4Hole);
+      if(hitYellow || hitRed){
         S.nextFree = true; S.nextFreeLevel = S.level; S.nextFreeBet = S.bet;
+        // 免費局贈送本局的獎勵燈號
+        S.nextFreeLights = {plusH:S.plusH, plusV:S.plusV, cornerStage:S.cornerStage,
+                            bonusYellow:S.bonusYellow, bonusRed:S.bonusRed, oddsUpStage:S.oddsUpStage};
         showMsg("BONUS GAME !<br>下一局免費", 3000);
       }
     }
@@ -1055,15 +1093,9 @@ function scoreRound(){
   btn.addEventListener("mouseup", up); btn.addEventListener("mouseleave", up);
   btn.addEventListener("touchend", up);
 });
-function placeBetN(n){
-  for(let i = 0; i < n; i++){
-    if(!S.bettingOpen || S.credits <= 0) break;
-    placeBet();
-  }
-}
 // BET 按鈕：倒數期間下注；第四球飛行中改為購買旋轉機會（每次付出對應 credits）
 function betPress(n){
-  if(S.bettingOpen){ placeBetN(n); return; }
+  if(S.bettingOpen){ placeBet(n); return; }
   if(S.paidSpinPhase){
     const buy = Math.min(n, S.credits);
     if(buy <= 0){ setStatus("CREDITS 不足，無法購買旋轉機會"); return; }
@@ -1079,7 +1111,7 @@ function bindBetButton(btn, n){
   let holdTimer = null;
   const down = e => {
     e.preventDefault(); betPress(n);
-    holdTimer = setInterval(()=>{ if(S.bettingOpen) placeBetN(n); }, n === 1 ? 80 : 200);
+    holdTimer = setInterval(()=>{ if(S.bettingOpen) placeBet(n); }, n === 1 ? 80 : 200);
   };
   const up = () => clearInterval(holdTimer);
   btn.addEventListener("mousedown", down);
@@ -1097,8 +1129,8 @@ window.addEventListener("keydown", e=>{
     $("btn"+k).classList.add("held");
     tryRotate(k);
   }
-  if(e.code === "Space"){ e.preventDefault(); e.repeat ? placeBetN(1) : betPress(1); }
-  if(e.code === "Enter"){ e.preventDefault(); e.repeat ? placeBetN(10) : betPress(10); }
+  if(e.code === "Space"){ e.preventDefault(); e.repeat ? placeBet(1) : betPress(1); }
+  if(e.code === "Enter"){ e.preventDefault(); e.repeat ? placeBet(10) : betPress(10); }
 });
 window.addEventListener("keyup", e=>{
   const k = e.key.toUpperCase();
