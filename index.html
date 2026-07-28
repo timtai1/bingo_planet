@@ -37,6 +37,11 @@
     background:radial-gradient(circle at 35% 30%,#ffffff,#8899bb);
     border:1px solid #aaeeff;opacity:.22;transition:opacity .3s;}
   .ballDot.fired{opacity:1;box-shadow:0 0 10px #ccffff;}
+  /* 轉盤中央的最後旋轉倒數提示 */
+  #spinMsg{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);z-index:6;
+    font-size:clamp(16px,3.5vh,30px);font-weight:900;color:var(--neon-yellow);text-align:center;
+    text-shadow:0 0 14px #f80,2px 2px 0 #000;pointer-events:none;display:none;white-space:nowrap;
+    animation:bonusGlow .5s alternate infinite;}
 
   /* ---------- 分隔拉桿 ---------- */
   .vsplit{flex:0 0 6px;cursor:col-resize;background:linear-gradient(180deg,#123,#28f,#123);}
@@ -193,7 +198,7 @@
      所有尺寸以螢幕寬度(vw)為基準再縮小一級，容器一律 overflow:hidden 防止互相重疊 */
   @media (max-aspect-ratio: 1/1){
     #app{flex-direction:column;}
-    #wheelPane{flex:0 0 30%;min-width:0;min-height:110px;width:100%;}
+    #wheelPane{flex:0 0 38%;min-width:0;min-height:110px;width:100%;}
     #wheelHint{display:none;}
     .vsplit{cursor:row-resize;background:linear-gradient(90deg,#123,#28f,#123);}
     #rightPane{min-width:0;width:100%;flex:1 1 0;min-height:0;overflow:hidden;}
@@ -222,15 +227,18 @@
     #infoBar{font-size:clamp(7px,2.4vw,11px);gap:4px;margin-top:2px;padding-top:2px;}
     #meteor{width:36px;height:24px;}
     #gameBox{padding:1px 5px;}
-    /* 按鈕區用自然高度確保完整顯示，玩家介面吃剩餘空間 */
-    #buttonPane{min-height:0;flex:0 0 auto;gap:5px;padding:3px 2px 6px;}
-    .abcd{width:min(5.5vh,40px);height:min(5.5vh,40px);font-size:13px;border-width:2px;}
-    .betBtn{width:min(7vh,52px);height:min(7vh,52px);font-size:11px;border-width:3px;}
-    #creditBtn{padding:5px 6px;font-size:9px;}
+    /* 按鈕區高度減半（隱藏文字標籤、按鈕縮小），讓轉盤畫面更大 */
+    #buttonPane{min-height:0;flex:0 0 auto;gap:4px;padding:2px 2px 4px;}
+    .btnLabel{display:none;}
+    #quadBtns{gap:2px 6px;}
+    .abcd{width:min(4vh,30px);height:min(4vh,30px);font-size:11px;border-width:2px;box-shadow:0 2px 0 #012,0 0 6px #08f;}
+    .betBtn{width:min(5.5vh,42px);height:min(5.5vh,42px);font-size:9px;border-width:2px;box-shadow:0 2px 0 #300,0 0 8px #f30;}
+    #creditBtn{padding:3px 5px;font-size:8px;}
+    #statusLine{font-size:clamp(7px,2.2vw,10px);}
     #countdown{font-size:clamp(18px,3vh,28px);}
     .ballDot{width:clamp(10px,1.8vh,15px);height:clamp(10px,1.8vh,15px);}
-    #statusLine{font-size:clamp(8px,2.4vw,11px);}
     #msg{font-size:clamp(12px,4.5vw,20px);}
+    #spinMsg{font-size:clamp(12px,3.6vw,18px);}
   }
 </style>
 </head>
@@ -245,6 +253,7 @@
         <div class="ballDot"></div><div class="ballDot"></div>
       </div>
     </div>
+    <div id="spinMsg"></div>
     <div id="wheelHint">滑鼠拖曳旋轉視角 / 滾輪縮放</div>
   </div>
   <div class="vsplit" id="vsplit"></div>
@@ -346,7 +355,9 @@ const PAYTABLE = [            // 依押注等級 1~10：[3連線, 4連線, 5連�
   [8,24,64],[16,48,128],[24,72,192],[32,96,256],[64,192,512],
   [128,384,1024],[256,768,2048],[512,1536,4096],[768,2304,6144],[1000,3000,10000]
 ];
-const P_PLUSONE = 1/50, P_CORNER = 1/10, P_BONUS = 1/10, P_ODDSUP = 1/500;
+const P_PLUSONE = 1/500, P_CORNER = 1/10, P_BONUS = 1/10, P_ODDSUP = 1/500;
+// PLUS ONE 只送中心與其上下左右，最多 5 格（5x5 索引：12=中心, 7=上, 17=下, 11=左, 13=右）
+const PLUS_IDX = [12, 7, 17, 11, 13];
 // 升級機率：等級 1~2 為 1/30，等級 3 以上為 1/50
 const upgradeChance = lv => lv <= 2 ? 1/30 : 1/50;
 const YELLOW_HOLES = new Set([5,10,15,20,25]);
@@ -501,8 +512,8 @@ function placeBet(){
   refreshScores(); refreshBonusUI();
 }
 function triggerPlusOne(){
-  // 點亮十字上尚未點亮的一格
-  const candidates = CROSS_IDX.filter(i => !S.plusLit.has(i));
+  // 只點亮中心與其上下左右尚未點亮的一格（最多 5 格）
+  const candidates = PLUS_IDX.filter(i => !S.plusLit.has(i));
   if(!candidates.length) return;
   const pick = candidates[Math.floor(Math.random()*candidates.length)];
   S.plusLit.add(pick);
@@ -762,9 +773,9 @@ function stepBall(b, dt, now){
   // 鍋面坡度重力（往中心）
   const slope = 2 * DISH_A * r * GRAV;
   let ax = -slope * x / r, az = -slope * z / r;
-  // 盤面摩擦拖曳：把球速度拉向盤面速度
+  // 盤面摩擦拖曳：把球速度拉向盤面速度（摩擦力降為原本 30%，球會滾比較久）
   const sv = wheelSurfaceVel(x,z);
-  const FR = 0.9;
+  const FR = 0.27;
   ax += (sv.x - vx) * FR; az += (sv.z - vz) * FR;
   vx += ax*dt; vz += az*dt;
   x += vx*dt; z += vz*dt;
@@ -800,20 +811,20 @@ function stepBall(b, dt, now){
     }
     const relVx = vx - sv.x, relVz = vz - sv.z;
     const relV = Math.hypot(relVx, relVz);
-    if(d < HOLE_R*0.9 && relV < 5.0){
-      // 球心越過洞緣且來不及飛越洞口：翻入洞內（進入落下物理）
+    if(d < HOLE_R*0.9 && relV < 3.2){
+      // 球心越過洞緣且速度夠慢：翻入洞內（進入落下物理）
       startCapture(b, h, now, x, z, vx, vz);
       return;
     }
-    if(d < HOLE_R && relV >= 5.0){
-      // 高速輾過洞口：撞擊洞緣反彈並損失能量，撞幾次自然變慢入洞
+    if(d < HOLE_R && relV >= 3.2){
+      // 太快輾過洞口：撞擊洞緣被彈掉並損失能量，撞幾次自然變慢才入得了洞
       const nx = (x-hp.x)/Math.max(d,1e-4), nz = (z-hp.z)/Math.max(d,1e-4);
       const vn = relVx*nx + relVz*nz;
       if(vn < 0){
         vx -= 1.55*vn*nx; vz -= 1.55*vn*nz;
-        vx = sv.x + (vx - sv.x)*0.7; vz = sv.z + (vz - sv.z)*0.7;
+        vx = sv.x + (vx - sv.x)*0.72; vz = sv.z + (vz - sv.z)*0.72;
       }
-    } else if(d < HOLE_R*2.4 && relV < 4.0){
+    } else if(d < HOLE_R*2.4 && relV < 2.5){
       // 洞口周圍的漏斗導引：慢速球被導向洞心
       const pull = 10 * (1 - d/(HOLE_R*2.4));
       vx += (hp.x-x)/Math.max(d,1e-4) * pull * dt;
@@ -936,15 +947,19 @@ function onBallLanded(b, h){
   refreshCard();
   const landedCount = S.landedBalls.length;
   if(landedCount === 3){
-    // 第三球入洞：倒數 5 秒後鎖定自由旋轉，接著發射第四球
-    let rc = 5;
-    $("countdown").textContent = rc;
-    setStatus("第 3 球入洞：5 秒後鎖定旋轉，把握時間按 A~D");
+    // 第三球入洞：轉盤中央倒數 10 秒後鎖定自由旋轉，接著發射第四球
+    let rc = 10;
+    const sm = $("spinMsg");
+    sm.style.display = "block";
+    sm.textContent = "最後旋轉BINGO只剩 " + rc + " 秒";
+    setStatus("第 3 球入洞：把握最後時間按 A~D 旋轉");
     const rcTimer = setInterval(()=>{
       rc--;
-      $("countdown").textContent = rc > 0 ? rc : "";
-      if(rc <= 0){
+      if(rc > 0){
+        sm.textContent = "最後旋轉BINGO只剩 " + rc + " 秒";
+      } else {
         clearInterval(rcTimer);
+        sm.style.display = "none";
         S.rotateFree = false;
         fireNext();                  // 第 4 球
       }
