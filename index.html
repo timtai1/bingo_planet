@@ -103,6 +103,10 @@
   .cell.marked{background:radial-gradient(circle,#d92f1c 0%,#7a0e06 80%);border-color:#ff9a8a;
     box-shadow:0 0 12px #f43,inset 0 0 8px #f86;}
   .cell.marked .num{color:#ffffff;text-shadow:0 0 8px #fff,0 0 16px #f44;}
+  /* 中央十字亮燈（黃色系）：亮燈視同該號碼進球 */
+  .cell.crosslit{background:radial-gradient(circle,#c79a00 0%,#6b4e00 80%);border-color:#ffd60a;
+    box-shadow:0 0 12px #fc0,inset 0 0 8px #fd6;}
+  .cell.crosslit .num{color:#fffbe0;text-shadow:0 0 8px #ffd60a,0 0 16px #f90;}
   .cell.lineWin{animation:lineFlash .3s alternate infinite;}
   @keyframes lineFlash{from{filter:brightness(1);}to{filter:brightness(2);}}
   /* 四象限的 A~D 呼吸標記：淡淡覆蓋各自的 2x2 區塊 */
@@ -361,6 +365,8 @@ const P_PLUS_H = 0.05, P_PLUS_V = 0.05;         // PLUS ONE 橫向 / 縱向
 const P_CORNER_200 = 0.20, P_CORNER_500 = 0.05; // 4CORNER 兩階段
 const P_BONUS_Y = 0.05, P_BONUS_R = 0.05;       // BONUS GAME 黃 / 紅
 const P_ODDSUP = 0.10;                          // ODDS UP 每次升一階
+const P_CROSS = 0.05;                           // 中央十字亮燈（亮燈視同該號碼進球）
+const CROSS_LIT_IDX = [12, 7, 17, 11, 13];      // 中心與其上下左右五格
 // 升級機率（已加倍）：等級 1~2 為 2/30，等級 3 以上為 2/50；BET 10 再乘 2
 const upgradeChance = lv => lv <= 2 ? 2/30 : 2/50;
 // 洞框顏色：一般藍色，5/15/25 黃色，10/20 紅色
@@ -381,9 +387,9 @@ const S = {
   plusH: false,             // PLUS ONE 橫向：橫向 2 個以上連續號碼時連線數 +1
   plusV: false,             // PLUS ONE 縱向
   bettingOpen: false,       // 只在開局 30 秒倒數期間可下注
-  rotateFree: true,         // 開局到第三球入洞後 5 秒內可自由旋轉 A~D
-  paidSpinPhase: false,     // 第四球飛行中：付費購買旋轉機會
-  spinTokens: 0,            // 已購買的旋轉機會數
+  rotateFree: true,         // 開局到第三球入洞前可自由旋轉 A~D
+  spin10Window: false,      // 第三球入洞後的 10 秒：按住 BET 10 + A~D 付費旋轉（10% 成功率）
+  crossLit: new Set(),      // 中央十字亮燈的格子索引（亮燈視同該號碼進球）
   freeGame: false,          // 本局為免費局
   nextFree: false, nextFreeLevel: 1, nextFreeBet: 0, nextFreeLights: null,
   landedBalls: [],          // 本局落入 1~25 的洞號（依序）
@@ -485,6 +491,7 @@ function refreshCard(){
   for(let i = 0; i < 25; i++){
     const n = S.card[i], el = cellEls[i];
     el.classList.toggle("marked", marked.has(n));
+    el.classList.toggle("crosslit", S.crossLit.has(i) && !marked.has(n));
     el.querySelector(".num").textContent = n;
   }
 }
@@ -523,24 +530,38 @@ function placeBet(n){
       S.oddsUpStage++;
       showMsg("ODDS " + S.oddsUpStage + "UP !", 2000);
     }
+    // 中央十字亮燈：點亮五格（中心與上下左右）之一，亮燈視同該號碼進球
+    if(Math.random() < P_CROSS){
+      const cands = CROSS_LIT_IDX.filter(i => !S.crossLit.has(i));
+      if(cands.length){
+        S.crossLit.add(cands[Math.floor(Math.random()*cands.length)]);
+        showMsg("十字亮燈 !", 1500);
+        refreshCard();
+      }
+    }
   }
   refreshScores(); refreshBonusUI();
 }
 
 /* ---------------- 四區塊旋轉 ---------------- */
-// 依遊戲階段決定能否旋轉：開局免費期直接轉；第四球飛行中消耗購買的機會、成功率 10%
+// 依遊戲階段決定能否旋轉：開局免費期直接轉；
+// 第四球倒數 10 秒內按住 BET 10 再按 A~D，每次付 10 credits、成功率 10%
+let bet10BtnHeld = false, bet10KeyHeld = false;
+const bet10Held = () => bet10BtnHeld || bet10KeyHeld;
 function tryRotate(q){
   if(S.rotating) return;
   if(S.rotateFree){ rotateQuad(q); return; }
-  if(S.paidSpinPhase){
-    if(S.spinTokens <= 0){ setStatus("請先按 BET 購買旋轉機會（每次付出對應 credits）"); return; }
-    S.spinTokens--;
+  if(S.spin10Window){
+    if(!bet10Held()){ setStatus("要按住 BET 10 再按 A~D 才能嘗試旋轉"); return; }
+    if(S.credits < 10){ setStatus("CREDITS 不足（每次嘗試需 10）"); return; }
+    S.credits -= 10; S.bet += 10;
+    meteorFx(); refreshScores();
     if(Math.random() < 0.10){
       rotateQuad(q);
       showMsg("SPIN " + q + " 成功！", 1200);
-      setStatus(q + " 旋轉成功！剩 " + S.spinTokens + " 次機會");
+      setStatus(q + " 旋轉成功！");
     } else {
-      setStatus(q + " 旋轉失敗（成功率 10%），剩 " + S.spinTokens + " 次機會");
+      setStatus(q + " 旋轉失敗（成功率 10%），可再試");
     }
     return;
   }
@@ -914,6 +935,7 @@ function startRound(){
     S.cornerStage = L.cornerStage || 0;
     S.bonusYellow = !!L.bonusYellow; S.bonusRed = !!L.bonusRed;
     S.oddsUpStage = L.oddsUpStage || 0;
+    S.crossLit = new Set(L.crossLit || []);
     showMsg("FREE GAME !<br>等級 " + S.level, 2500);
   } else {
     // 一般新局：所有獎勵燈號重置
@@ -922,9 +944,10 @@ function startRound(){
     S.oddsUpStage = 0; S.cornerStage = 0;
     S.bonusYellow = false; S.bonusRed = false;
     S.plusH = false; S.plusV = false;
+    S.crossLit.clear();
   }
   S.bettingOpen = true; S.rotateFree = true;
-  S.paidSpinPhase = false; S.spinTokens = 0;
+  S.spin10Window = false;
   refreshScores(); refreshBonusUI(); refreshCard();
   updateBallDots();
   // 開局先倒數 30 秒（顯示在轉盤中央）：只有這段時間可以下注，也可自由按 A~D 調整數字位置
@@ -959,11 +982,8 @@ function fireNext(){
   launchBall(launched);
   updateBallDots();
   if(launched === 4){
-    // 第四球飛行中：可付費購買旋轉機會（成功率 10%）
-    S.paidSpinPhase = true;
     showMsg(S.ball4Yellow ? "第 4 球：黃球！" : "第 4 球：白球", 2000);
-    setStatus("第 4 球（" + (S.ball4Yellow ? "黃球" : "白球") +
-      "）飛行中：按 BET 購買旋轉機會，再按 A~D 旋轉（成功率 10%）");
+    setStatus("第 4 球（" + (S.ball4Yellow ? "黃球" : "白球") + "）飛行中");
   } else {
     setStatus("第 " + launched + " 球發射");
   }
@@ -974,28 +994,30 @@ function onBallLanded(b, h){
   refreshCard();
   const landedCount = S.landedBalls.length;
   if(landedCount === 3){
-    // 第三球入洞：轉盤中央倒數 10 秒後鎖定自由旋轉，接著發射第四球
+    // 第三球入洞：轉盤中央顯示「第四顆球倒數10秒」
+    // 這 10 秒內按住 BET 10 再按 A~D 可付費嘗試旋轉（每次 10 credits、成功率 10%）
+    S.rotateFree = false;
+    S.spin10Window = true;
     let rc = 10;
     const sm = $("spinMsg");
     sm.style.display = "block";
-    sm.textContent = "最後旋轉BINGO只剩 " + rc + " 秒";
-    setStatus("第 3 球入洞：把握最後時間按 A~D 旋轉");
+    sm.textContent = "第四顆球倒數 " + rc + " 秒";
+    setStatus("按住 BET 10 再按 A~D 旋轉數字（每次 10 credits，成功率 10%）");
     const rcTimer = setInterval(()=>{
       rc--;
       if(rc > 0){
-        sm.textContent = "最後旋轉BINGO只剩 " + rc + " 秒";
+        sm.textContent = "第四顆球倒數 " + rc + " 秒";
       } else {
         clearInterval(rcTimer);
         sm.style.display = "none";
-        S.rotateFree = false;
+        S.spin10Window = false;
         fireNext();                  // 第 4 球
       }
     }, 1000);
     timers.push(rcTimer);
   } else if(landedCount === 4){
     S.ball4Hole = h.num;
-    // 第四球落定：付費旋轉階段結束，發射第五球
-    S.paidSpinPhase = false; S.spinTokens = 0;
+    // 第四球落定：發射第五球
     schedule(fireNext, 1200);
   } else if(landedCount === 5){
     schedule(scoreRound, 800);
@@ -1016,7 +1038,8 @@ function scoreRound(){
   const marked = new Set(S.landedBalls);
   const markedIdx = new Set();
   for(let i = 0; i < 25; i++){
-    if(marked.has(S.card[i])) markedIdx.add(i);
+    // 十字亮燈的格子視同該號碼進球
+    if(marked.has(S.card[i]) || S.crossLit.has(i)) markedIdx.add(i);
   }
   let total = 0;
   const counts = {3:0,4:0,5:0};
@@ -1069,7 +1092,8 @@ function scoreRound(){
         S.nextFree = true; S.nextFreeLevel = S.level; S.nextFreeBet = S.bet;
         // 免費局贈送本局的獎勵燈號
         S.nextFreeLights = {plusH:S.plusH, plusV:S.plusV, cornerStage:S.cornerStage,
-                            bonusYellow:S.bonusYellow, bonusRed:S.bonusRed, oddsUpStage:S.oddsUpStage};
+                            bonusYellow:S.bonusYellow, bonusRed:S.bonusRed, oddsUpStage:S.oddsUpStage,
+                            crossLit:Array.from(S.crossLit)};
         showMsg("BONUS GAME !<br>下一局免費", 3000);
       }
     }
@@ -1104,16 +1128,11 @@ function scoreRound(){
   btn.addEventListener("mouseup", up); btn.addEventListener("mouseleave", up);
   btn.addEventListener("touchend", up);
 });
-// BET 按鈕：倒數期間下注；第四球飛行中改為購買旋轉機會（每次付出對應 credits）
+// BET 按鈕：倒數期間下注；第四顆球倒數 10 秒內按住 BET 10 可搭配 A~D 付費旋轉
 function betPress(n){
   if(S.bettingOpen){ placeBet(n); return; }
-  if(S.paidSpinPhase){
-    const buy = Math.min(n, S.credits);
-    if(buy <= 0){ setStatus("CREDITS 不足，無法購買旋轉機會"); return; }
-    S.credits -= buy; S.bet += buy; S.spinTokens += buy;
-    meteorFx();
-    setStatus("旋轉機會 +" + buy + "（共 " + S.spinTokens + " 次，按 A~D 使用，成功率 10%）");
-    refreshScores();
+  if(S.spin10Window && n === 10){
+    setStatus("按住 BET 10 再按 A~D 旋轉（每次 10 credits，成功率 10%）");
     return;
   }
   setStatus("現在不能下注（只能在開局倒數 30 秒內）");
@@ -1121,10 +1140,15 @@ function betPress(n){
 function bindBetButton(btn, n){
   let holdTimer = null;
   const down = e => {
-    e.preventDefault(); betPress(n);
+    e.preventDefault();
+    if(n === 10) bet10BtnHeld = true;
+    betPress(n);
     holdTimer = setInterval(()=>{ if(S.bettingOpen) placeBet(n); }, n === 1 ? 80 : 200);
   };
-  const up = () => clearInterval(holdTimer);
+  const up = () => {
+    if(n === 10) bet10BtnHeld = false;
+    clearInterval(holdTimer);
+  };
   btn.addEventListener("mousedown", down);
   btn.addEventListener("touchstart", down, {passive:false});
   ["mouseup","mouseleave","touchend"].forEach(ev => btn.addEventListener(ev, up));
@@ -1141,11 +1165,16 @@ window.addEventListener("keydown", e=>{
     tryRotate(k);
   }
   if(e.code === "Space"){ e.preventDefault(); e.repeat ? placeBet(1) : betPress(1); }
-  if(e.code === "Enter"){ e.preventDefault(); e.repeat ? placeBet(10) : betPress(10); }
+  if(e.code === "Enter"){
+    e.preventDefault();
+    bet10KeyHeld = true;              // 按住 Enter 等同按住 BET 10
+    e.repeat ? placeBet(10) : betPress(10);
+  }
 });
 window.addEventListener("keyup", e=>{
   const k = e.key.toUpperCase();
   if(["A","B","C","D"].includes(k)) $("btn"+k).classList.remove("held");
+  if(e.code === "Enter") bet10KeyHeld = false;
 });
 
 /* ---------------- 分割拉桿 ---------------- */
