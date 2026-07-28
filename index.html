@@ -361,8 +361,8 @@ const P_PLUS_H = 0.05, P_PLUS_V = 0.05;         // PLUS ONE 橫向 / 縱向
 const P_CORNER_200 = 0.20, P_CORNER_500 = 0.05; // 4CORNER 兩階段
 const P_BONUS_Y = 0.05, P_BONUS_R = 0.05;       // BONUS GAME 黃 / 紅
 const P_ODDSUP = 0.10;                          // ODDS UP 每次升一階
-// 升級機率：等級 1~2 為 1/30，等級 3 以上為 1/50
-const upgradeChance = lv => lv <= 2 ? 1/30 : 1/50;
+// 升級機率（已加倍）：等級 1~2 為 2/30，等級 3 以上為 2/50；BET 10 再乘 2
+const upgradeChance = lv => lv <= 2 ? 2/30 : 2/50;
 // 洞框顏色：一般藍色，5/15/25 黃色，10/20 紅色
 const YELLOW_HOLES = new Set([5,15,25]);
 const RED_HOLES = new Set([10,20]);
@@ -785,9 +785,9 @@ function stepBall(b, dt, now){
   // 鍋面坡度重力（往中心）
   const slope = 2 * DISH_A * r * GRAV;
   let ax = -slope * x / r, az = -slope * z / r;
-  // 盤面摩擦拖曳：把球速度拉向盤面速度（摩擦力降為原本 30%，球會滾比較久）
+  // 盤面摩擦拖曳：把球速度拉向盤面速度（低摩擦，球會滾很久才慢下來）
   const sv = wheelSurfaceVel(x,z);
-  const FR = 0.27;
+  const FR = 0.135;
   ax += (sv.x - vx) * FR; az += (sv.z - vz) * FR;
   vx += ax*dt; vz += az*dt;
   x += vx*dt; z += vz*dt;
