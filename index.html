@@ -1198,6 +1198,7 @@ function persistPlayer(mut){
   const ps = store.players;
   if(!ps[playerName]) ps[playerName] = {banked:0, totalIn:0, playTime:0};
   mut(ps[playerName]);
+  ps[playerName].ts = Date.now();   // 最後更新時間，供跨來源合併時取新捨舊
   store.players = ps;
 }
 function enterGame(name){
@@ -1225,7 +1226,8 @@ function bankOut(){
     r.playTime += Math.round((Date.now() - sessionStart) / 1000);
   });
   S.credits = 0; refreshScores();
-  showRanking();
+  // 先上傳雲端榜再顯示排行（上傳失敗也照樣顯示，本機紀錄不受影響）
+  pushGlobal().finally(showRanking);
 }
 $("bankBtn").addEventListener("click", ()=>{
   if(!confirm("將離開遊戲，確定嗎？")) return;
@@ -1244,15 +1246,57 @@ function fmtTime(sec){
   const h = Math.floor(sec/3600), m = Math.floor(sec%3600/60), s = sec%60;
   return (h ? h + " 時 " : "") + m + " 分 " + s + " 秒";
 }
-async function showRanking(){
-  // 讀取 repo 內的 leaderboard.json（全域榜），與本機紀錄合併；本機紀錄優先
-  let merged = {};
+/* 跨裝置排行榜後端（零帳號、自我修復）：
+   - jsonblob 當即時收件匣，瀏覽器直接寫入（網址記在 repo 的 lb-config.json）
+   - GitHub Actions 排程每 6 小時把收件匣合併進 leaderboard.json 永久保存並延長 blob 壽命，
+     blob 過期時自動重建並更新 lb-config.json，遊戲端自動跟上新網址 */
+let lbApiCache = "";
+async function lbApi(){
+  if(lbApiCache) return lbApiCache;
   try{
-    const res = await fetch("leaderboard.json", {cache:"no-store"});
-    if(res.ok) merged = await res.json();
-  }catch(e){ /* 離線或本機開啟時略過 */ }
-  const local = store.players;
-  Object.keys(local).forEach(n => { merged[n] = local[n]; });
+    const r = await fetch("lb-config.json", {cache:"no-store"});
+    if(r.ok) lbApiCache = ((await r.json()) || {}).api || "";
+  }catch(e){}
+  return lbApiCache;
+}
+async function fetchJson(url){
+  try{
+    const r = await fetch(url, {cache:"no-store"});
+    if(r.ok){ const j = await r.json(); if(j && typeof j === "object") return j; }
+  }catch(e){}
+  return null;
+}
+// 依 ts（最後更新時間）合併多個榜單來源，後列來源平手時優先
+function mergeBoards(...boards){
+  const out = {};
+  boards.forEach(b=>{
+    Object.entries(b || {}).forEach(([n, r])=>{
+      if(!out[n] || (r.ts || 0) >= (out[n].ts || 0)) out[n] = r;
+    });
+  });
+  return out;
+}
+async function pushGlobal(){
+  // 把自己的最新紀錄合併進收件匣（讀-改-寫；後端不可用時靜默略過，本機紀錄仍在）
+  if(!playerName) return;
+  const api = await lbApi();
+  if(!api) return;
+  try{
+    const g = (await fetchJson(api)) || {};
+    g[playerName] = store.players[playerName];
+    await fetch(api, {
+      method:"PUT",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify(g)
+    });
+  }catch(e){}
+}
+async function showRanking(){
+  // 永久榜（repo 檔案）+ 即時收件匣（blob）+ 本機紀錄，三來源依 ts 合併
+  const api = await lbApi();
+  const seed = await fetchJson("leaderboard.json");
+  const blob = api ? await fetchJson(api) : null;
+  const merged = mergeBoards(seed, blob, store.players);
   const rows = Object.entries(merged).map(([n, r]) => ({
     name: n,
     playTime: r.playTime || 0,
