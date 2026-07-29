@@ -28,8 +28,12 @@
   #wheelCanvas{width:100%;height:100%;display:block;touch-action:none;}
   button{touch-action:manipulation;}
   #wheelHint{position:absolute;left:8px;bottom:6px;font-size:10px;color:#4af;opacity:.7;}
-  /* 左上角：玩家名字 */
+  /* 左上角：玩家名字；右上角：排行榜 / 暫停 */
   #hud{position:absolute;top:10px;left:10px;display:flex;align-items:center;gap:12px;z-index:5;}
+  #topBtns{position:absolute;top:8px;right:8px;z-index:60;display:flex;gap:6px;}
+  #topBtns button{padding:6px 10px;border-radius:8px;border:2px solid #2b6cff;background:#071040;
+    color:#9fdcff;font-weight:bold;cursor:pointer;font-size:clamp(10px,1.6vh,13px);}
+  #topBtns button:active{background:#123a8a;}
   #playerName{font-size:clamp(14px,2.4vh,22px);font-weight:900;color:var(--neon-cyan);
     text-shadow:0 0 10px var(--neon-blue),1px 1px 0 #000;letter-spacing:1px;}
   /* 全螢幕覆蓋層：輸入名字 / 排行榜 */
@@ -105,6 +109,10 @@
     background:#061055;text-shadow:0 0 4px #0af;}
   #bingoGrid{flex:1 1 auto;display:grid;grid-template-columns:repeat(5,1fr);
     grid-template-rows:repeat(5,1fr);gap:3px;position:relative;min-height:0;}
+  /* 12 條得分線（橫/直/斜）畫在格子縫隙間；得分時亮起 */
+  #lineSvg{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:0;}
+  #lineSvg line{stroke:#0d1c4d;stroke-width:1.5;vector-effect:non-scaling-stroke;}
+  #lineSvg line.winline{stroke:#ffd60a;stroke-width:2.5;filter:drop-shadow(0 0 3px #fc0);}
   .cell{position:relative;border:1px solid #1440c8;border-radius:4px;background:#050c3a;
     display:flex;align-items:center;justify-content:center;overflow:visible;}
   .cell .num{font-size:clamp(12px,2.4vh,24px);font-weight:900;color:var(--neon-cyan);
@@ -145,6 +153,7 @@
     font-size:clamp(9px,1.5vh,16px);letter-spacing:1px;}
   .oddsRow.cur{animation:rowBreath 1s ease-in-out alternate infinite;}
   .oddsRow.cur div{animation:lvBlink .35s alternate infinite;}
+  .oddsRow.scan{background-color:rgba(255,255,255,.3) !important;}   /* 押注時由下往上掃過的閃光 */
   @keyframes lvBlink{from{filter:brightness(.9);}to{filter:brightness(2.2);text-shadow:0 0 10px currentColor;}}
   @keyframes rowBreath{from{background-color:transparent;}to{background-color:var(--rowbg);}}
   #lineRow{display:flex;gap:3px;margin-top:3px;}
@@ -158,13 +167,15 @@
     margin-top:4px;padding-top:3px;font-size:clamp(10px,1.3vw,15px);}
   #meteor{position:relative;width:64px;height:40px;border:2px solid #4a5;border-radius:50%;
     background:radial-gradient(circle at 60% 40%,#031,#010b04);overflow:hidden;flex:0 0 auto;}
-  .star{position:absolute;width:3px;height:3px;border-radius:50%;background:#8fc;}
-  /* 流星由右上往左下飛：亮頭在左端（前進方向），尾巴淡出朝右上 */
-  .meteorFx{position:absolute;width:26px;height:2px;border-radius:2px;
+  .star{position:absolute;width:2px;height:2px;border-radius:50%;background:#bfe;
+    box-shadow:0 0 3px #8fc,0 0 6px #4c8;}
+  /* 流星由圈圈右上往左下衝：亮頭在左端（前進方向），尾巴淡出朝右上 */
+  .meteorFx{position:absolute;left:0;top:0;width:45%;height:2px;border-radius:2px;
     background:linear-gradient(270deg,transparent,#bff,#fff);
     animation:meteorMove .5s linear forwards;}
-  @keyframes meteorMove{from{transform:translate(70px,-6px) rotate(-20deg);opacity:1;}
-    to{transform:translate(-30px,30px) rotate(-20deg);opacity:0;}}
+  @keyframes meteorMove{
+    from{transform:translate(var(--sx),var(--sy)) rotate(-25deg);opacity:1;}
+    to{transform:translate(var(--ex),var(--ey)) rotate(-25deg);opacity:0;}}
   #scoreCols{flex:1 1 auto;display:flex;gap:10px;}
   .scorePair{display:flex;flex-direction:column;gap:1px;}
   .scorePair .k{color:#9f9;font-size:.8em;}
@@ -202,8 +213,9 @@
   #creditBtn{padding:8px 12px;border-radius:8px;border:2px solid #4f6;background:#052;
     color:#cfc;font-weight:bold;cursor:pointer;font-size:clamp(10px,1.6vh,14px);}
   #creditBtn:active{background:#0a4;}
-  #bankBtn{margin-top:4px;padding:6px 12px;border-radius:8px;border:2px solid #fa5;background:#520;
-    color:#fda;font-weight:bold;cursor:pointer;font-size:clamp(10px,1.6vh,14px);}
+  /* 寄幣與投幣同尺寸 */
+  #bankBtn{margin-top:4px;padding:8px 12px;border-radius:8px;border:2px solid #fa5;background:#520;
+    color:#fda;font-weight:bold;cursor:pointer;font-size:clamp(10px,1.6vh,14px);width:100%;}
   #bankBtn:active{background:#a40;}
   #statusLine{width:100%;text-align:center;font-size:clamp(9px,1.4vh,13px);color:#9cf;
     text-shadow:0 0 4px #05f;order:99;}
@@ -250,8 +262,9 @@
     .abcd{width:min(4vh,30px);height:min(4vh,30px);font-size:11px;border-width:2px;box-shadow:0 2px 0 #012,0 0 6px #08f;}
     .betBtn{width:min(5.5vh,42px);height:min(5.5vh,42px);font-size:9px;border-width:2px;box-shadow:0 2px 0 #300,0 0 8px #f30;}
     #creditBtn{padding:3px 5px;font-size:8px;}
-    #bankBtn{padding:2px 5px;font-size:8px;margin-top:2px;}
+    #bankBtn{padding:3px 5px;font-size:8px;margin-top:2px;}
     #playerName{font-size:clamp(11px,3vw,15px);}
+    #topBtns button{padding:4px 7px;font-size:9px;}
     #statusLine{font-size:clamp(7px,2.2vw,10px);}
     #countdown{font-size:clamp(18px,3vh,28px);}
     .ballDot{width:clamp(10px,1.8vh,15px);height:clamp(10px,1.8vh,15px);}
@@ -267,6 +280,10 @@
     <canvas id="wheelCanvas"></canvas>
     <div id="hud">
       <div id="playerName"></div>
+    </div>
+    <div id="topBtns">
+      <button id="rankBtn">排行榜</button>
+      <button id="pauseBtn">暫停</button>
     </div>
     <div id="spinMsg"></div>
     <div id="wheelHint">滑鼠拖曳旋轉視角 / 滾輪縮放</div>
@@ -310,6 +327,7 @@
           <div id="cardFrame">
             <div id="cardTitle">BINGO CARD</div>
             <div id="bingoGrid">
+              <svg id="lineSvg" viewBox="0 0 100 100" preserveAspectRatio="none"></svg>
               <div class="quadMark" id="qmA">A</div>
               <div class="quadMark" id="qmB">B</div>
               <div class="quadMark" id="qmC">C</div>
@@ -430,8 +448,10 @@ const S = {
   landedBalls: [],          // 本局落入 1~25 的洞號（依序）
   ball4Hole: 0,             // 第四顆球的洞號（BONUS GAME 判定用）
   phase: "idle",            // idle / balls / spin / scoring / reset
+  roundCounted: false,      // 本局是否已計入遊玩局數（有下注才算）
   card: [], cross: new Set(), rotating: false,
 };
+let paused = false;         // 暫停旗標：凍結轉盤/球物理、倒數與押注
 
 /* ---------------- 賓果卡：1~25 隨機、中央十字固定 ---------------- */
 // 中央十字（第 3 列與第 3 行）在四區塊旋轉時永遠不動
@@ -464,6 +484,33 @@ const cellEls = [];
   }
 })();
 
+// 12 條得分線 SVG（順序需與 LINES 一致：5 橫、5 直、2 斜）
+const svgLines = [];
+(function buildLineSvg(){
+  const svg = $("lineSvg"), NS = "http://www.w3.org/2000/svg";
+  const mk = (x1,y1,x2,y2)=>{
+    const l = document.createElementNS(NS, "line");
+    l.setAttribute("x1",x1); l.setAttribute("y1",y1);
+    l.setAttribute("x2",x2); l.setAttribute("y2",y2);
+    svg.appendChild(l); svgLines.push(l);
+  };
+  for(let r = 0; r < 5; r++) mk(0, r*20+10, 100, r*20+10);
+  for(let c = 0; c < 5; c++) mk(c*20+10, 0, c*20+10, 100);
+  mk(0, 0, 100, 100); mk(100, 0, 0, 100);
+})();
+
+// 點擊賓果盤的四個角落區域 = 按下對應的 A~D（手機直接點盤面旋轉）
+gridEl.addEventListener("pointerdown", e=>{
+  const r = gridEl.getBoundingClientRect();
+  const x = (e.clientX - r.left) / r.width, y = (e.clientY - r.top) / r.height;
+  let q = null;
+  if(x < 0.4 && y < 0.4) q = "A";
+  else if(x > 0.6 && y < 0.4) q = "B";
+  else if(x < 0.4 && y > 0.6) q = "C";
+  else if(x > 0.6 && y > 0.6) q = "D";
+  if(q) tryRotate(q);
+});
+
 (function buildOddsTable(){
   const t = $("oddsTable");
   // column-reverse：等級 1 在最下、等級 10 在最上（同實機面板）
@@ -488,9 +535,11 @@ const cellEls = [];
 
 (function buildStars(){
   const m = $("meteor");
-  for(let i = 0; i < 7; i++){
+  for(let i = 0; i < 12; i++){
     const s = document.createElement("div"); s.className = "star";
-    s.style.left = (5+Math.random()*50)+"px"; s.style.top = (4+Math.random()*30)+"px";
+    // 用百分比定位，手機縮小後星星仍在圈圈內
+    s.style.left = (8 + Math.random()*78) + "%";
+    s.style.top = (10 + Math.random()*70) + "%";
     m.appendChild(s);
   }
 })();
@@ -529,6 +578,34 @@ function refreshCard(){
     el.classList.toggle("crosslit", S.crossLit.has(i) && !marked.has(n));
     el.querySelector(".num").textContent = n;
   }
+  updateLineHighlights();
+}
+// 該線是否有至少 2 個「連續」亮格（PLUS ONE 加一條件）
+function lineHasRun2(line, markedIdx){
+  let run = 0;
+  for(const i of line){
+    run = markedIdx.has(i) ? run + 1 : 0;
+    if(run >= 2) return true;
+  }
+  return false;
+}
+function currentMarkedIdx(){
+  const marked = new Set(S.landedBalls);
+  const idx = new Set();
+  for(let i = 0; i < 25; i++){
+    if(marked.has(S.card[i]) || S.crossLit.has(i)) idx.add(i);
+  }
+  return idx;
+}
+// 即時判斷得分線：達成 3 連線以上的線亮起，讓玩家馬上知道得分
+function updateLineHighlights(){
+  const markedIdx = currentMarkedIdx();
+  LINES.forEach((line, li)=>{
+    let c = line.filter(i => markedIdx.has(i)).length;
+    const isRow = li < 5, isCol = li >= 5 && li < 10;
+    if(((isRow && S.plusH) || (isCol && S.plusV)) && lineHasRun2(line, markedIdx)) c = Math.min(5, c + 1);
+    svgLines[li].classList.toggle("winline", c >= 3);
+  });
 }
 let msgTimer = null;
 function showMsg(text, ms){
@@ -539,18 +616,27 @@ function showMsg(text, ms){
 function hideMsg(){ $("msg").classList.remove("show"); }
 function setStatus(t){ $("statusLine").textContent = t; }
 function meteorFx(){
+  // 依圈圈實際大小計算軌跡：從右上往左下衝
   const m = $("meteor"), fx = document.createElement("div");
-  fx.className = "meteorFx"; m.appendChild(fx);
+  fx.className = "meteorFx";
+  const w = m.clientWidth, h = m.clientHeight;
+  fx.style.setProperty("--sx", (w*0.75) + "px");
+  fx.style.setProperty("--sy", (h*0.05) + "px");
+  fx.style.setProperty("--ex", (-w*0.35) + "px");
+  fx.style.setProperty("--ey", (h*0.75) + "px");
+  m.appendChild(fx);
   setTimeout(()=>fx.remove(), 600);
 }
 
 /* ---------------- 押注 ---------------- */
 // 一次押 n 點（免費局也可下注來提升押注等級）；獎勵燈只在 BET 10 時擲骰
 function placeBet(n){
-  if(!S.bettingOpen || S.rotating) return;
+  if(!S.bettingOpen || S.rotating || paused) return;
   if(S.credits < n){ setStatus("CREDITS 不足，請按投幣 +100"); return; }
   S.credits -= n; S.bet += n;
   meteorFx();
+  levelScan();          // 等級行由下往上掃過的閃光
+  markRoundPlayed();    // 本局有下注即計入遊玩局數
   // BET 10 的升級機率是 BET 1 的兩倍
   const upChance = upgradeChance(S.level) * (n === 10 ? 2 : 1);
   if(S.level < 10 && Math.random() < upChance) S.level++;
@@ -570,12 +656,33 @@ function placeBet(n){
       const cands = CROSS_LIT_IDX.filter(i => !S.crossLit.has(i));
       if(cands.length){
         S.crossLit.add(cands[Math.floor(Math.random()*cands.length)]);
-        showMsg("十字亮燈 !", 1500);
+        showMsg("送燈 !", 1500);
         refreshCard();
       }
     }
   }
   refreshScores(); refreshBonusUI();
+}
+// 押注時等級表由下往上逐行閃過（每行 0.05 秒），營造「正在嘗試升級」的感覺
+let scanTimer = null;
+function levelScan(){
+  if(scanTimer) return;
+  let lv = 1;
+  scanTimer = setInterval(()=>{
+    document.querySelectorAll(".oddsRow").forEach(r => r.classList.remove("scan"));
+    if(lv <= 10){
+      $("odds_lv" + lv).classList.add("scan");
+      lv++;
+    } else {
+      clearInterval(scanTimer); scanTimer = null;
+    }
+  }, 50);
+}
+// 本局只要有下注（含付費旋轉）就計入一局遊玩
+function markRoundPlayed(){
+  if(S.roundCounted) return;
+  S.roundCounted = true;
+  persistPlayer(r=>{ r.playCount = (r.playCount || 0) + 1; });
 }
 
 /* ---------------- 四區塊旋轉 ---------------- */
@@ -584,12 +691,13 @@ function placeBet(n){
 let bet10BtnHeld = false, bet10KeyHeld = false;
 const bet10Held = () => bet10BtnHeld || bet10KeyHeld;
 function tryRotate(q){
-  if(S.rotating) return;
+  if(S.rotating || paused) return;
   if(S.rotateFree){ rotateQuad(q); return; }
   if(S.spin10Window){
     if(!bet10Held()){ setStatus("要按住 BET 10 再按 A~D 才能嘗試旋轉"); return; }
     if(S.credits < 10){ setStatus("CREDITS 不足（每次嘗試需 10）"); return; }
     S.credits -= 10; S.bet += 10;
+    markRoundPlayed();
     meteorFx(); refreshScores();
     if(Math.random() < 0.10){
       rotateQuad(q);
@@ -612,9 +720,9 @@ function rotateQuad(q){
     const next = (k+1) % 4;             // 順時針：左上到右上到右下到左下
     const dx = rects[next].left - rects[k].left;
     const dy = rects[next].top  - rects[k].top;
-    // 整個格子（含外框、底色、亮燈狀態）一起平移，不只數字
+    // 整個格子（含外框、底色、亮燈狀態）一起平移，不只數字；轉速較原設計快 50%
     const el = cellEls[cellIdx];
-    el.style.transition = "transform 1s ease-in-out";
+    el.style.transition = "transform 0.67s ease-in-out";
     el.style.transform = "translate(" + dx + "px," + dy + "px)";
     el.style.zIndex = 5;
   });
@@ -631,7 +739,7 @@ function rotateQuad(q){
     });
     S.rotating = false;
     refreshCard();
-  }, 1000);
+  }, 670);
 }
 
 /* =====================================================================
@@ -797,6 +905,33 @@ function surfaceGroup(radius, ang){
 })();
 
 /* ---------------- 球與物理 ---------------- */
+// 轉盤周圍的倒數燈環：全亮後順時針逐顆熄滅，代表倒數計時
+const RIM_LIGHTS = [];
+(function buildRimLights(){
+  const n = 36, rr = DISH_R + 0.55, y = dishY(DISH_R) + 1.15;
+  const mat = new THREE.MeshStandardMaterial({color:0xffd60a, emissive:0xffaa00, emissiveIntensity:1.3});
+  for(let i = 0; i < n; i++){
+    const a = i / n * Math.PI * 2;
+    const m = new THREE.Mesh(new THREE.SphereGeometry(0.22, 8, 8), mat);
+    m.position.set(Math.cos(a)*rr, y, Math.sin(a)*rr);
+    m.visible = false;
+    scene.add(m); RIM_LIGHTS.push(m);
+  }
+})();
+function startRimCountdown(ms, onDone){
+  RIM_LIGHTS.forEach(l => l.visible = true);
+  let off = 0;
+  const t = setInterval(()=>{
+    if(paused) return;
+    if(off < RIM_LIGHTS.length){ RIM_LIGHTS[off].visible = false; off++; }
+    if(off >= RIM_LIGHTS.length){
+      clearInterval(t);
+      onDone();
+    }
+  }, ms / RIM_LIGHTS.length);
+  timers.push(t);
+}
+
 const ballGeo = new THREE.SphereGeometry(BALL_R, 20, 20);
 const ballMat = new THREE.MeshStandardMaterial({color:0xf5f5f5, metalness:0.3, roughness:0.25, emissive:0x222222});
 const balls = [];  // {mesh,x,z,vx,vz,state:"rolling"|"sinking"|"landed",hole,launchT,ballIndex}
@@ -949,8 +1084,15 @@ function relaunch(ballIndex){
 }
 
 /* ---------------- 回合流程 ---------------- */
-let launched = 0, timers = [];
-function schedule(fn, ms){ const t = setTimeout(fn, ms); timers.push(t); return t; }
+let launched = 0, timers = [], pausedPending = [];
+// 排程包裝：暫停中到期的排程先攔下，恢復時再執行
+function schedule(fn, ms){
+  const t = setTimeout(()=>{
+    if(paused) pausedPending.push(fn);
+    else fn();
+  }, ms);
+  timers.push(t); return t;
+}
 function clearTimers(){ timers.forEach(clearTimeout); timers = []; }
 
 function startRound(){
@@ -982,7 +1124,7 @@ function startRound(){
     S.crossLit.clear();
   }
   S.bettingOpen = true; S.rotateFree = true;
-  S.spin10Window = false;
+  S.spin10Window = false; S.roundCounted = false;
   refreshScores(); refreshBonusUI(); refreshCard();
   // 開局先倒數 30 秒（顯示在轉盤中央）：只有這段時間可以下注，也可自由按 A~D 調整數字位置
   S.phase = "countdown";
@@ -992,6 +1134,7 @@ function startRound(){
   sm.textContent = "下注倒數 " + cd + " 秒";
   setStatus((S.freeGame ? "免費局（沿用上局獎勵與等級）" : "倒數 30 秒") + "：可下注、按 A~D 旋轉區塊");
   const cdTimer = setInterval(()=>{
+    if(paused) return;
     cd--;
     if(cd > 0){
       sm.textContent = "下注倒數 " + cd + " 秒";
@@ -1024,31 +1167,34 @@ function onBallLanded(b, h){
   refreshCard();
   const landedCount = S.landedBalls.length;
   if(landedCount === 3){
-    // 第三球入洞：轉盤中央顯示「第四顆球倒數10秒」
-    // 這 10 秒內按住 BET 10 再按 A~D 可付費嘗試旋轉（每次 10 credits、成功率 10%）
+    // 第三球入洞：轉盤周圍燈全亮，10 秒內順時針逐顆熄滅代表倒數
+    // 燈全滅之前可按住 BET 10 再按 A~D 付費旋轉（每次 10 credits、成功率 10%）
     S.rotateFree = false;
     S.spin10Window = true;
+    setStatus("外圈燈熄滅前：按住 BET 10 再按 A~D 旋轉數字（每次 10 credits，成功率 10%）");
+    startRimCountdown(10000, ()=>{
+      S.spin10Window = false;
+      fireNext();                    // 第 4 球
+    });
+  } else if(landedCount === 4){
+    S.ball4Hole = h.num;
+    // 第四顆球落洞之後才開始倒數，倒數結束發射第五球
     let rc = 10;
     const sm = $("spinMsg");
     sm.style.display = "block";
-    sm.textContent = "第四顆球倒數 " + rc + " 秒";
-    setStatus("按住 BET 10 再按 A~D 旋轉數字（每次 10 credits，成功率 10%）");
+    sm.textContent = "第 5 球倒數 " + rc + " 秒";
     const rcTimer = setInterval(()=>{
+      if(paused) return;
       rc--;
       if(rc > 0){
-        sm.textContent = "第四顆球倒數 " + rc + " 秒";
+        sm.textContent = "第 5 球倒數 " + rc + " 秒";
       } else {
         clearInterval(rcTimer);
         sm.style.display = "none";
-        S.spin10Window = false;
-        fireNext();                  // 第 4 球
+        fireNext();                  // 第 5 球
       }
     }, 1000);
     timers.push(rcTimer);
-  } else if(landedCount === 4){
-    S.ball4Hole = h.num;
-    // 第四球落定：發射第五球
-    schedule(fireNext, 1200);
   } else if(landedCount === 5){
     schedule(scoreRound, 800);
   }
@@ -1065,12 +1211,7 @@ const LINES = (function(){
 
 function scoreRound(){
   S.phase = "scoring";
-  const marked = new Set(S.landedBalls);
-  const markedIdx = new Set();
-  for(let i = 0; i < 25; i++){
-    // 十字亮燈的格子視同該號碼進球
-    if(marked.has(S.card[i]) || S.crossLit.has(i)) markedIdx.add(i);
-  }
+  const markedIdx = currentMarkedIdx();   // 十字亮燈的格子視同該號碼進球
   let total = 0;
   const counts = {3:0,4:0,5:0};
   // ODDS UP：燈亮不代表中獎，第四球必須是「黃球」且進黃框洞（5/15/25）才生效，派彩等級提升 1 或 2 級
@@ -1081,22 +1222,13 @@ function scoreRound(){
   }
   const pay = PAYTABLE[payLevel-1];
   const winCells = new Set();
-  // 至少 2 個「連續」亮格才符合 PLUS ONE 的加一條件
-  const hasRun2 = line => {
-    let run = 0;
-    for(const i of line){
-      run = markedIdx.has(i) ? run + 1 : 0;
-      if(run >= 2) return true;
-    }
-    return false;
-  };
   if(S.bet > 0 || S.freeGame){
     LINES.forEach((line, li)=>{
       let c = line.filter(i => markedIdx.has(i)).length;
       // PLUS ONE：橫向燈對橫排、縱向燈對直排，各自把連線數 +1（兩個連續號碼就算 3 連線）
       const isRow = li < 5, isCol = li >= 5 && li < 10;
-      if(isRow && S.plusH && hasRun2(line)) c = Math.min(5, c + 1);
-      if(isCol && S.plusV && hasRun2(line)) c = Math.min(5, c + 1);
+      if(isRow && S.plusH && lineHasRun2(line, markedIdx)) c = Math.min(5, c + 1);
+      if(isCol && S.plusV && lineHasRun2(line, markedIdx)) c = Math.min(5, c + 1);
       if(c >= 3){
         counts[c]++;
         total += pay[c-3];
@@ -1193,23 +1325,36 @@ const store = {
   set current(v){ localStorage.setItem("bp_current", v); }
 };
 let playerName = "";
-let sessionStart = 0;                 // 本次遊玩起算時間（計算總遊玩時間用）
 function persistPlayer(mut){
   const ps = store.players;
-  if(!ps[playerName]) ps[playerName] = {banked:0, totalIn:0, playTime:0};
+  if(!ps[playerName]) ps[playerName] = {banked:0, totalIn:0, playCount:0};
   mut(ps[playerName]);
   ps[playerName].ts = Date.now();   // 最後更新時間，供跨來源合併時取新捨舊
   store.players = ps;
 }
-function enterGame(name){
+async function enterGame(name){
   playerName = name;
   store.current = name;
+  // 先與雲端同步：若雲端有較新的同名紀錄（例如在其他裝置玩過），採用它，
+  // 這樣同一玩家的總投幣/局數才會跨裝置累加而不是被本機舊紀錄蓋掉
+  try{
+    const api = await lbApi();
+    const cloud = api ? await fetchJson(api) : null;
+    const seed = await fetchJson("leaderboard.json");
+    const remote = mergeBoards(seed, cloud)[name];
+    const ps = store.players;
+    const local = ps[name];
+    if(remote && (!local || (remote.ts || 0) > (local.ts || 0))){
+      ps[name] = remote; store.players = ps;
+    }
+  }catch(e){}
   // 取回上次寄存的分數繼續玩（用累加避免覆蓋場上既有的 credits）
   persistPlayer(r=>{
     S.credits += r.banked || 0;
     r.banked = 0;
   });
-  sessionStart = Date.now();
+  // 把「已提領」狀態同步上雲，其他裝置才不會重複取回同一筆寄幣
+  pushGlobal();
   $("playerName").textContent = playerName;
   refreshScores();
   setStatus("歡迎 " + playerName + "！按「投幣」增加 CREDITS（+100/次）");
@@ -1220,11 +1365,8 @@ $("creditBtn").addEventListener("click", ()=>{
   refreshScores();
 });
 function bankOut(){
-  // 剩餘 credits 寄存到玩家名下，並累計遊玩時間
-  persistPlayer(r=>{
-    r.banked = S.credits;
-    r.playTime += Math.round((Date.now() - sessionStart) / 1000);
-  });
+  // 剩餘 credits 寄存到玩家名下
+  persistPlayer(r=>{ r.banked = S.credits; });
   S.credits = 0; refreshScores();
   // 先上傳雲端榜再顯示排行（上傳失敗也照樣顯示，本機紀錄不受影響）
   pushGlobal().finally(showRanking);
@@ -1236,16 +1378,9 @@ $("bankBtn").addEventListener("click", ()=>{
 // 關閉頁面時自動寄幣，避免分數遺失
 window.addEventListener("beforeunload", ()=>{
   if(playerName && $("rankScreen").style.display === "none"){
-    persistPlayer(r=>{
-      r.banked = S.credits;
-      r.playTime += Math.round((Date.now() - sessionStart) / 1000);
-    });
+    persistPlayer(r=>{ r.banked = S.credits; });
   }
 });
-function fmtTime(sec){
-  const h = Math.floor(sec/3600), m = Math.floor(sec%3600/60), s = sec%60;
-  return (h ? h + " 時 " : "") + m + " 分 " + s + " 秒";
-}
 /* 跨裝置排行榜後端（零帳號、自我修復）：
    - jsonblob 當即時收件匣，瀏覽器直接寫入（網址記在 repo 的 lb-config.json）
    - GitHub Actions 排程每 6 小時把收件匣合併進 leaderboard.json 永久保存並延長 blob 壽命，
@@ -1299,16 +1434,16 @@ async function showRanking(){
   const merged = mergeBoards(seed, blob, store.players);
   const rows = Object.entries(merged).map(([n, r]) => ({
     name: n,
-    playTime: r.playTime || 0,
+    playCount: r.playCount || 0,
     totalIn: r.totalIn || 0,
     banked: r.banked || 0,
     net: (r.banked || 0) - (r.totalIn || 0)
   })).sort((a, b) => b.net - a.net);
-  let html = "<tr><th>名次</th><th>玩家</th><th>總遊玩時間</th><th>總投幣</th><th>寄幣</th><th>淨勝分</th></tr>";
+  let html = "<tr><th>名次</th><th>玩家</th><th>總遊玩局數</th><th>總投幣</th><th>寄幣</th><th>淨勝分</th></tr>";
   rows.forEach((r, i)=>{
     html += "<tr" + (r.name === playerName ? " class='me'" : "") + ">" +
       "<td>" + (i+1) + "</td><td>" + r.name.replace(/</g,"&lt;") + "</td>" +
-      "<td>" + fmtTime(r.playTime) + "</td><td>" + r.totalIn + "</td>" +
+      "<td>" + r.playCount + "</td><td>" + r.totalIn + "</td>" +
       "<td>" + r.banked + "</td><td>" + (r.net >= 0 ? "+" : "") + r.net + "</td></tr>";
   });
   $("rankTable").innerHTML = html;
@@ -1316,7 +1451,23 @@ async function showRanking(){
 }
 $("backBtn").addEventListener("click", ()=>{
   $("rankScreen").style.display = "none";
-  enterGame(playerName);               // 取回寄幣、重新起算遊玩時間
+  // 取回寄幣（若剛寄過），不影響場上既有 credits
+  persistPlayer(r=>{ S.credits += r.banked || 0; r.banked = 0; });
+  pushGlobal();
+  refreshScores();
+});
+// 右上角：排行榜（隨時可看）與暫停
+$("rankBtn").addEventListener("click", ()=>{ showRanking(); });
+$("pauseBtn").addEventListener("click", ()=>{
+  paused = !paused;
+  $("pauseBtn").textContent = paused ? "繼續" : "暫停";
+  if(paused){
+    showMsg("已暫停");
+  } else {
+    hideMsg();
+    // 執行暫停期間被攔下的排程
+    pausedPending.splice(0).forEach(fn => fn());
+  }
 });
 $("nameOk").addEventListener("click", ()=>{
   const name = $("nameInput").value.trim();
@@ -1403,16 +1554,18 @@ function animate(now){
   requestAnimationFrame(animate);
   const dt = Math.min((now - lastT)/1000, 0.033);
   lastT = now;
-  wheel.rotation.y -= WHEEL_W * dt;      // 由上往下看為順時針
-  balls.forEach(b=>{
-    if(b.state === "rolling") stepBall(b, dt*2, now);   // 球滾動以 2 倍速模擬
-    else if(b.state === "capturing") stepCapture(b, dt, now);
-    else if(b.state === "landed" && b.hole){
-      const hp = holeWorldPos(b.hole);
-      b.mesh.position.set(hp.x, hp.y + BALL_R - REST_DEPTH, hp.z);
-    }
-    else if(b.state === "recycling") b.mesh.position.y -= 3*dt;
-  });
+  if(!paused){
+    wheel.rotation.y -= WHEEL_W * dt;    // 由上往下看為順時針
+    balls.forEach(b=>{
+      if(b.state === "rolling") stepBall(b, dt*2, now);   // 球滾動以 2 倍速模擬
+      else if(b.state === "capturing") stepCapture(b, dt, now);
+      else if(b.state === "landed" && b.hole){
+        const hp = holeWorldPos(b.hole);
+        b.mesh.position.set(hp.x, hp.y + BALL_R - REST_DEPTH, hp.z);
+      }
+      else if(b.state === "recycling") b.mesh.position.y -= 3*dt;
+    });
+  }
   controls.update();
   renderer.render(scene, camera);
 }
