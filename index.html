@@ -257,14 +257,14 @@
     #infoBar{font-size:clamp(7px,2.4vw,11px);gap:4px;margin-top:2px;padding-top:2px;}
     #meteor{width:36px;height:24px;}
     #gameBox{padding:1px 5px;}
-    /* 按鈕區高度減半（隱藏文字標籤、按鈕縮小），讓轉盤畫面更大 */
-    #buttonPane{min-height:0;flex:0 0 auto;gap:4px;padding:2px 2px 4px;}
+    /* 按鈕區：隱藏 A~D（改點賓果盤旋轉）、BET 放大、投幣/寄幣並排方形 */
+    #buttonPane{min-height:0;flex:0 0 auto;gap:6px;padding:2px 2px 4px;}
     .btnLabel{display:none;}
-    #quadBtns{gap:2px 6px;}
-    .abcd{width:min(4vh,30px);height:min(4vh,30px);font-size:11px;border-width:2px;box-shadow:0 2px 0 #012,0 0 6px #08f;}
-    .betBtn{width:min(5.5vh,42px);height:min(5.5vh,42px);font-size:9px;border-width:2px;box-shadow:0 2px 0 #300,0 0 8px #f30;}
-    #creditBtn{padding:3px 5px;font-size:8px;}
-    #bankBtn{padding:3px 5px;font-size:8px;margin-top:2px;}
+    #quadBtns{display:none;}
+    .betBtn{width:min(6.9vh,53px);height:min(6.9vh,53px);font-size:11px;border-width:2px;box-shadow:0 2px 0 #300,0 0 8px #f30;}
+    #coinBtns{flex-direction:row;gap:6px;}
+    #creditBtn,#bankBtn{width:min(6.9vh,53px);height:min(6.9vh,53px);padding:0;margin:0;
+      font-size:10px;line-height:1.2;border-radius:10px;}
     #playerName{font-size:clamp(11px,3vw,15px);}
     #topBtns button{padding:4px 7px;font-size:9px;}
     #statusLine{font-size:clamp(7px,2.2vw,10px);}
@@ -373,7 +373,7 @@
       </div>
       <div class="btnWrap"><button class="betBtn" id="betBtn1">BET<br>1</button><div class="btnLabel">押注 1 (Space)</div></div>
       <div class="btnWrap"><button class="betBtn bet10" id="betBtn10">BET<br>10</button><div class="btnLabel">押注 10 (Enter)</div></div>
-      <div class="btnWrap">
+      <div class="btnWrap" id="coinBtns">
         <button id="creditBtn">投幣<br>+100</button>
         <button id="bankBtn">寄幣</button>
       </div>
@@ -395,7 +395,7 @@
   <div class="panel">
     <h2>排 行 榜</h2>
     <table id="rankTable"></table>
-    <p style="color:#8fa8d0;font-size:11px;margin-top:8px;">名次依「寄幣 − 總投幣」淨勝分排序</p>
+    <p style="color:#8fa8d0;font-size:11px;margin-top:8px;">名次依「總得分」排序（每次寄幣結算當次損益的加總）</p>
     <button id="backBtn">回到遊戲</button>
   </div>
 </div>
@@ -415,7 +415,7 @@ const PAYTABLE = [            // 依押注等級 1~10：[3連線, 4連線, 5連�
   [8,24,64],[16,48,128],[24,72,192],[32,96,256],[64,192,512],
   [128,384,1024],[256,768,2048],[512,1536,4096],[768,2304,6144],[1000,3000,10000]
 ];
-// 獎勵擲骰機率（只在按 BET 10 時擲）
+// 獎勵擲骰機率（以 BET 10 為基準；BET 1 的機率為其 10%）
 const P_PLUS_H = 0.05, P_PLUS_V = 0.05;         // PLUS ONE 橫向 / 縱向
 const P_CORNER_200 = 0.20, P_CORNER_500 = 0.05; // 4CORNER 兩階段
 const P_BONUS_Y = 0.05, P_BONUS_R = 0.05;       // BONUS GAME 黃 / 紅
@@ -639,28 +639,26 @@ function placeBet(n){
   meteorFx();
   levelScan();          // 等級行由下往上掃過的閃光
   markRoundPlayed();    // 本局有下注即計入遊玩局數
-  // BET 10 的升級機率是 BET 1 的兩倍
-  const upChance = upgradeChance(S.level) * (n === 10 ? 2 : 1);
-  if(S.level < 10 && Math.random() < upChance) S.level++;
-  if(n === 10){
-    if(!S.plusH && Math.random() < P_PLUS_H){ S.plusH = true; showMsg("PLUS ONE 橫向 !", 1500); }
-    if(!S.plusV && Math.random() < P_PLUS_V){ S.plusV = true; showMsg("PLUS ONE 縱向 !", 1500); }
-    if(S.cornerStage < 2 && Math.random() < P_CORNER_500){ S.cornerStage = 2; showMsg("4CORNER 500 !", 1500); }
-    else if(S.cornerStage < 1 && Math.random() < P_CORNER_200){ S.cornerStage = 1; showMsg("4CORNER 200 !", 1500); }
-    if(!S.bonusYellow && Math.random() < P_BONUS_Y){ S.bonusYellow = true; showMsg("BONUS GAME 黃 !", 1500); }
-    if(!S.bonusRed && Math.random() < P_BONUS_R){ S.bonusRed = true; showMsg("BONUS GAME 紅 !", 1500); }
-    if(S.oddsUpStage < 2 && Math.random() < P_ODDSUP){
-      S.oddsUpStage++;
-      showMsg("ODDS " + S.oddsUpStage + "UP !", 2000);
-    }
-    // 中央十字亮燈：點亮五格（中心與上下左右）之一，亮燈視同該號碼進球
-    if(Math.random() < P_CROSS){
-      const cands = CROSS_LIT_IDX.filter(i => !S.crossLit.has(i));
-      if(cands.length){
-        S.crossLit.add(cands[Math.floor(Math.random()*cands.length)]);
-        showMsg("送燈 !", 1500);
-        refreshCard();
-      }
+  // BET 1 的所有觸發機率為 BET 10 的 10%
+  const mult = n === 10 ? 1 : 0.1;
+  if(S.level < 10 && Math.random() < upgradeChance(S.level) * 2 * mult) S.level++;
+  if(!S.plusH && Math.random() < P_PLUS_H * mult){ S.plusH = true; showMsg("PLUS ONE 橫向 !", 1500); }
+  if(!S.plusV && Math.random() < P_PLUS_V * mult){ S.plusV = true; showMsg("PLUS ONE 縱向 !", 1500); }
+  if(S.cornerStage < 2 && Math.random() < P_CORNER_500 * mult){ S.cornerStage = 2; showMsg("4CORNER 500 !", 1500); }
+  else if(S.cornerStage < 1 && Math.random() < P_CORNER_200 * mult){ S.cornerStage = 1; showMsg("4CORNER 200 !", 1500); }
+  if(!S.bonusYellow && Math.random() < P_BONUS_Y * mult){ S.bonusYellow = true; showMsg("BONUS GAME 黃 !", 1500); }
+  if(!S.bonusRed && Math.random() < P_BONUS_R * mult){ S.bonusRed = true; showMsg("BONUS GAME 紅 !", 1500); }
+  if(S.oddsUpStage < 2 && Math.random() < P_ODDSUP * mult){
+    S.oddsUpStage++;
+    showMsg("ODDS " + S.oddsUpStage + "UP !", 2000);
+  }
+  // 中央十字亮燈：點亮五格（中心與上下左右）之一，亮燈視同該號碼進球
+  if(Math.random() < P_CROSS * mult){
+    const cands = CROSS_LIT_IDX.filter(i => !S.crossLit.has(i));
+    if(cands.length){
+      S.crossLit.add(cands[Math.floor(Math.random()*cands.length)]);
+      showMsg("送燈 !", 1500);
+      refreshCard();
     }
   }
   refreshScores(); refreshBonusUI();
@@ -686,11 +684,12 @@ function levelScan(){
     }
   }, 100);
 }
-// 本局只要有下注（含付費旋轉）就計入一局遊玩
+// 本局只要有下注（含付費旋轉）就計入一局遊玩，並立即上傳雲端（不等寄幣）
 function markRoundPlayed(){
   if(S.roundCounted) return;
   S.roundCounted = true;
   persistPlayer(r=>{ r.playCount = (r.playCount || 0) + 1; });
+  pushGlobal();
 }
 
 /* ---------------- 四區塊旋轉 ---------------- */
@@ -1176,12 +1175,10 @@ function onBallLanded(b, h){
   const landedCount = S.landedBalls.length;
   if(landedCount === 3){
     // 第三球入洞：轉盤周圍燈全亮，10 秒內順時針逐顆熄滅代表倒數
-    // 燈全滅之前可按住 BET 10 再按 A~D 付費旋轉（每次 10 credits、成功率 10%）
-    S.rotateFree = false;
-    S.spin10Window = true;
-    setStatus("外圈燈熄滅前：按住 BET 10 再按 A~D 旋轉數字（每次 10 credits，成功率 10%）");
+    // 燈全滅之前仍可「自由」按 A~D 旋轉，燈全滅後才鎖定
+    setStatus("外圈燈熄滅前可自由按 A~D 旋轉數字");
     startRimCountdown(10000, ()=>{
-      S.spin10Window = false;
+      S.rotateFree = false;
       fireNext();                    // 第 4 球
     });
   } else if(landedCount === 4){
@@ -1336,6 +1333,8 @@ const store = {
   set current(v){ localStorage.setItem("bp_current", v); }
 };
 let playerName = "";
+let sessionIn = 0;      // 本次遊玩的投幣總額
+let sessionCarry = 0;   // 本次遊玩開始時從寄幣取回的額度
 function persistPlayer(mut){
   const ps = store.players;
   if(!ps[playerName]) ps[playerName] = {banked:0, totalIn:0, playCount:0};
@@ -1361,9 +1360,11 @@ async function enterGame(name){
   }catch(e){}
   // 取回上次寄存的分數繼續玩（用累加避免覆蓋場上既有的 credits）
   persistPlayer(r=>{
-    S.credits += r.banked || 0;
+    sessionCarry = r.banked || 0;
+    S.credits += sessionCarry;
     r.banked = 0;
   });
+  sessionIn = 0;
   // 把「已提領」狀態同步上雲，其他裝置才不會重複取回同一筆寄幣
   pushGlobal();
   $("playerName").textContent = playerName;
@@ -1372,12 +1373,21 @@ async function enterGame(name){
 }
 $("creditBtn").addEventListener("click", ()=>{
   S.credits += 100;
+  sessionIn += 100;
   persistPlayer(r=>{ r.totalIn += 100; });   // 記入總投幣金額
   refreshScores();
 });
+// 寄幣結算：本次遊玩損益 = 結束時 Credits − 本次投幣 −（開場取回的寄幣），累加進總得分
+function settleSession(){
+  const profit = S.credits - sessionIn - sessionCarry;
+  persistPlayer(r=>{
+    r.banked = S.credits;
+    r.totalScore = (r.totalScore || 0) + profit;
+  });
+  sessionIn = 0; sessionCarry = 0;
+}
 function bankOut(){
-  // 剩餘 credits 寄存到玩家名下
-  persistPlayer(r=>{ r.banked = S.credits; });
+  settleSession();
   S.credits = 0; refreshScores();
   // 先上傳雲端榜再顯示排行（上傳失敗也照樣顯示，本機紀錄不受影響）
   pushGlobal().finally(showRanking);
@@ -1386,10 +1396,10 @@ $("bankBtn").addEventListener("click", ()=>{
   if(!confirm("將離開遊戲，確定嗎？")) return;
   bankOut();
 });
-// 關閉頁面時自動寄幣，避免分數遺失
+// 關閉頁面時自動寄幣結算，避免分數遺失
 window.addEventListener("beforeunload", ()=>{
   if(playerName && $("rankScreen").style.display === "none"){
-    persistPlayer(r=>{ r.banked = S.credits; });
+    settleSession();
   }
 });
 /* 跨裝置排行榜後端（零帳號、自我修復）：
@@ -1448,22 +1458,27 @@ async function showRanking(){
     playCount: r.playCount || 0,
     totalIn: r.totalIn || 0,
     banked: r.banked || 0,
-    net: (r.banked || 0) - (r.totalIn || 0)
-  })).sort((a, b) => b.net - a.net);
-  let html = "<tr><th>名次</th><th>玩家</th><th>總遊玩局數</th><th>總投幣</th><th>寄幣</th><th>淨勝分</th></tr>";
+    totalScore: r.totalScore || 0     // 每次寄幣結算的損益加總
+  })).sort((a, b) => b.totalScore - a.totalScore);
+  let html = "<tr><th>名次</th><th>玩家</th><th>總遊玩局數</th><th>總投幣</th><th>寄幣</th><th>總得分</th></tr>";
   rows.forEach((r, i)=>{
     html += "<tr" + (r.name === playerName ? " class='me'" : "") + ">" +
       "<td>" + (i+1) + "</td><td>" + r.name.replace(/</g,"&lt;") + "</td>" +
       "<td>" + r.playCount + "</td><td>" + r.totalIn + "</td>" +
-      "<td>" + r.banked + "</td><td>" + (r.net >= 0 ? "+" : "") + r.net + "</td></tr>";
+      "<td>" + r.banked + "</td><td>" + (r.totalScore >= 0 ? "+" : "") + r.totalScore + "</td></tr>";
   });
   $("rankTable").innerHTML = html;
   $("rankScreen").style.display = "flex";
 }
 $("backBtn").addEventListener("click", ()=>{
   $("rankScreen").style.display = "none";
-  // 取回寄幣（若剛寄過），不影響場上既有 credits
-  persistPlayer(r=>{ S.credits += r.banked || 0; r.banked = 0; });
+  // 取回寄幣（若剛寄過），不影響場上既有 credits，並重新起算本次遊玩
+  persistPlayer(r=>{
+    sessionCarry = r.banked || 0;
+    S.credits += sessionCarry;
+    r.banked = 0;
+  });
+  sessionIn = 0;
   pushGlobal();
   refreshScores();
 });
