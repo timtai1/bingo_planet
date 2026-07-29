@@ -63,3 +63,6 @@
 ## 本機執行
 
 直接用瀏覽器開啟 `index.html` 即可（需可連網載入 Three.js CDN）。
+
+## AI
+Anthropic Claude Fable 5
