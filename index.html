@@ -153,7 +153,9 @@
     font-size:clamp(9px,1.5vh,16px);letter-spacing:1px;}
   .oddsRow.cur{animation:rowBreath 1s ease-in-out alternate infinite;}
   .oddsRow.cur div{animation:lvBlink .35s alternate infinite;}
-  .oddsRow.scan{background-color:rgba(255,255,255,.3) !important;}   /* 押注時由下往上掃過的閃光 */
+  /* 押注時由目前等級往上掃過的閃光：每行亮起後淡出，前一行滅一半時下一行才亮 */
+  .oddsRow.scan{animation:scanFade .2s linear forwards;}
+  @keyframes scanFade{from{background-color:rgba(255,255,255,.34);}to{background-color:transparent;}}
   @keyframes lvBlink{from{filter:brightness(.9);}to{filter:brightness(2.2);text-shadow:0 0 10px currentColor;}}
   @keyframes rowBreath{from{background-color:transparent;}to{background-color:var(--rowbg);}}
   #lineRow{display:flex;gap:3px;margin-top:3px;}
@@ -663,20 +665,26 @@ function placeBet(n){
   }
   refreshScores(); refreshBonusUI();
 }
-// 押注時等級表由下往上逐行閃過（每行 0.05 秒），營造「正在嘗試升級」的感覺
+// 押注時等級表「從目前等級」往上逐行閃過，營造「正在嘗試升級」的感覺
+// 每行亮起後以 0.2 秒淡出，下一行在前一行滅到一半（0.1 秒）時亮起，銜接較順
 let scanTimer = null;
 function levelScan(){
   if(scanTimer) return;
-  let lv = 1;
+  const rows = [];
+  for(let lv = S.level; lv <= 10; lv++) rows.push(lv);
+  let i = 0;
   scanTimer = setInterval(()=>{
-    document.querySelectorAll(".oddsRow").forEach(r => r.classList.remove("scan"));
-    if(lv <= 10){
-      $("odds_lv" + lv).classList.add("scan");
-      lv++;
+    if(i < rows.length){
+      const el = $("odds_lv" + rows[i]);
+      el.classList.remove("scan");
+      void el.offsetWidth;             // 強制 reflow，讓動畫可重新觸發
+      el.classList.add("scan");
+      i++;
     } else {
       clearInterval(scanTimer); scanTimer = null;
+      rows.forEach(lv => setTimeout(()=>$("odds_lv" + lv).classList.remove("scan"), 250));
     }
-  }, 50);
+  }, 100);
 }
 // 本局只要有下注（含付費旋轉）就計入一局遊玩
 function markRoundPlayed(){
@@ -1178,7 +1186,9 @@ function onBallLanded(b, h){
     });
   } else if(landedCount === 4){
     S.ball4Hole = h.num;
-    // 第四顆球落洞之後才開始倒數，倒數結束發射第五球
+    // 第四顆球落洞之後才開始倒數，這 10 秒內同樣可按住 BET 10 + A~D 付費旋轉
+    S.spin10Window = true;
+    setStatus("第 5 球倒數中：按住 BET 10 再按 A~D 旋轉數字（每次 10 credits，成功率 10%）");
     let rc = 10;
     const sm = $("spinMsg");
     sm.style.display = "block";
@@ -1191,6 +1201,7 @@ function onBallLanded(b, h){
       } else {
         clearInterval(rcTimer);
         sm.style.display = "none";
+        S.spin10Window = false;
         fireNext();                  // 第 5 球
       }
     }, 1000);
