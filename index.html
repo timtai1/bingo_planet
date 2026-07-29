@@ -298,7 +298,7 @@
           <div class="label">PLUS ONE</div>
           <div class="ball">
             <div class="tier" id="plusHTier">橫 +1</div>
-            <div class="tier" id="plusVTier">縱 +1</div>
+            <div class="tier" id="plusVTier">直 +1</div>
           </div>
         </div>
         <div class="bonus" id="bnCorner">
@@ -642,8 +642,8 @@ function placeBet(n){
   // BET 1 的所有觸發機率為 BET 10 的 10%
   const mult = n === 10 ? 1 : 0.1;
   if(S.level < 10 && Math.random() < upgradeChance(S.level) * 2 * mult) S.level++;
-  if(!S.plusH && Math.random() < P_PLUS_H * mult){ S.plusH = true; showMsg("PLUS ONE 橫向 !", 1500); }
-  if(!S.plusV && Math.random() < P_PLUS_V * mult){ S.plusV = true; showMsg("PLUS ONE 縱向 !", 1500); }
+  if(!S.plusH && Math.random() < P_PLUS_H * mult){ S.plusH = true; showMsg("送橫拐 !", 1500); }
+  if(!S.plusV && Math.random() < P_PLUS_V * mult){ S.plusV = true; showMsg("送直拐 !", 1500); }
   if(S.cornerStage < 2 && Math.random() < P_CORNER_500 * mult){ S.cornerStage = 2; showMsg("4CORNER 500 !", 1500); }
   else if(S.cornerStage < 1 && Math.random() < P_CORNER_200 * mult){ S.cornerStage = 1; showMsg("4CORNER 200 !", 1500); }
   if(!S.bonusYellow && Math.random() < P_BONUS_Y * mult){ S.bonusYellow = true; showMsg("BONUS GAME 黃 !", 1500); }
