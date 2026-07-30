@@ -90,6 +90,39 @@
   .bonus .tier.lit{color:#fff;background:#a00;border-color:#f66;text-shadow:0 0 6px #ff0;
     animation:bonusGlow .4s alternate infinite;}
   .bonus .icon{font-size:18px;line-height:1;}
+  /* PLUS ONE：小格盤 + 星星格；橫向中獎亮星星那一橫排、縱向亮直排 */
+  #plusGrid{display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(3,1fr);
+    gap:1px;width:66%;height:66%;}
+  #plusGrid i{border:1px solid #2b5cd0;background:rgba(4,10,50,.6);position:relative;border-radius:1px;}
+  #plusGrid i:nth-child(5)::after{content:"";position:absolute;inset:10%;background:#ffd60a;
+    clip-path:polygon(50% 0%,61% 35%,98% 35%,68% 57%,79% 91%,50% 70%,21% 91%,32% 57%,2% 35%,39% 35%);}
+  #plusGrid.h i:nth-child(n+4):nth-child(-n+6){background:#7fe8ff;box-shadow:0 0 6px #7fe8ff;}
+  #plusGrid.v i:nth-child(3n+2){background:#7fe8ff;box-shadow:0 0 6px #7fe8ff;}
+  /* 4CORNER：方框四角藍色小方塊 + 500/200 數字 */
+  #cornerIcon{width:36%;height:26%;border:1px solid #46c;position:relative;margin-bottom:1px;}
+  #cornerIcon b{position:absolute;width:30%;height:36%;background:#39f;box-shadow:0 0 3px #6cf;}
+  #cornerIcon b:nth-child(1){left:-1px;top:-1px;} #cornerIcon b:nth-child(2){right:-1px;top:-1px;}
+  #cornerIcon b:nth-child(3){left:-1px;bottom:-1px;} #cornerIcon b:nth-child(4){right:-1px;bottom:-1px;}
+  .tierNum{font-weight:900;color:#245a88;line-height:1.1;font-size:clamp(9px,1.1vw,13px);
+    letter-spacing:1px;}
+  .tierNum.lit{color:#fff;text-shadow:0 0 6px #fff,0 0 14px #4af;animation:bonusGlow .4s alternate infinite;}
+  #corner500{font-size:clamp(11px,1.4vw,17px);}
+  /* BONUS GAME：上下兩顆飛碟（上黃框、下紅框），點亮發光 */
+  .saucer{width:64%;height:32%;}
+  .saucer .dome{fill:#26406a;}
+  .saucer .rim{fill:#0a1440;stroke-width:2.5;}
+  .saucer .rimY{stroke:#b08800;} .saucer .rimR{stroke:#992222;}
+  .saucer.lit .dome{fill:#ff8c1a;}
+  .saucer.lit .rimY{stroke:#ffd60a;} .saucer.lit .rimR{stroke:#ff4433;}
+  .saucer.lit{filter:drop-shadow(0 0 5px #fc0);animation:bonusGlow .4s alternate infinite;}
+  /* ODDS UP：黃球入黃框洞圖示 + 1UP/2UP/X2 */
+  #oddsIcon{width:64%;height:36%;}
+  #oddsTiers{display:flex;gap:4px;align-items:baseline;}
+  /* 右上角固定的 ODDS X2 泡泡（斜線兩倍規則標示） */
+  #oddsX2Bubble{flex:0 0 auto;align-self:flex-start;margin-top:2px;width:min(5.5vh,44px);height:min(5.5vh,44px);
+    border-radius:50%;background:radial-gradient(circle at 35% 30%,#2a52ff,#0a1670);border:2px solid #46f;
+    display:flex;align-items:center;justify-content:center;text-align:center;line-height:1.1;
+    font-size:clamp(7px,0.9vw,11px);font-weight:900;color:#bfe9ff;text-shadow:0 0 4px #4af;}
 
   /* ---------- 標題 ---------- */
   #title{text-align:center;font-size:clamp(14px,2.2vw,26px);font-weight:900;font-style:italic;
@@ -111,17 +144,19 @@
     grid-template-rows:repeat(5,1fr);gap:3px;position:relative;min-height:0;}
   /* 12 條得分線（橫/直/斜）畫在格子縫隙間；得分時亮起 */
   #lineSvg{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:0;}
-  #lineSvg line{stroke:#0d1c4d;stroke-width:1.5;vector-effect:non-scaling-stroke;}
-  #lineSvg line.winline{stroke:#ffd60a;stroke-width:2.5;filter:drop-shadow(0 0 3px #fc0);}
+  /* 如實機：格子縫隙間為紅色刻點虛線，得分線亮黃 */
+  #lineSvg line{stroke:#a02020;stroke-width:1.5;stroke-dasharray:2 5;vector-effect:non-scaling-stroke;}
+  #lineSvg line.winline{stroke:#ffd60a;stroke-width:2.5;stroke-dasharray:none;
+    filter:drop-shadow(0 0 3px #fc0);}
   .cell{position:relative;border:1px solid #1440c8;border-radius:4px;background:#050c3a;
     display:flex;align-items:center;justify-content:center;overflow:visible;}
   .cell .num{font-size:clamp(12px,2.4vh,24px);font-weight:900;color:var(--neon-cyan);
     text-shadow:0 0 6px var(--neon-blue),0 0 12px #06f;transition:none;position:relative;z-index:2;}
   .cell.cross{background:#0a1655;border-color:#3a6cff;}
-  /* 進洞的號碼用紅色調，比較明顯 */
-  .cell.marked{background:radial-gradient(circle,#d92f1c 0%,#7a0e06 80%);border-color:#ff9a8a;
-    box-shadow:0 0 12px #f43,inset 0 0 8px #f86;}
-  .cell.marked .num{color:#ffffff;text-shadow:0 0 8px #fff,0 0 16px #f44;}
+  /* 進洞的號碼：如實機般整格反白發亮、數字深色 */
+  .cell.marked{background:radial-gradient(circle,#ffffff 0%,#bfe9ff 80%);border-color:#ffffff;
+    box-shadow:0 0 14px #cef,0 0 4px #fff,inset 0 0 6px #9cf;}
+  .cell.marked .num{color:#0a3a66;text-shadow:0 0 2px #fff;}
   /* 中央十字亮燈（黃色系）：亮燈視同該號碼進球 */
   .cell.crosslit{background:radial-gradient(circle,#c79a00 0%,#6b4e00 80%);border-color:#ffd60a;
     box-shadow:0 0 12px #fc0,inset 0 0 8px #fd6;}
@@ -140,19 +175,21 @@
     background:linear-gradient(180deg,#0a1560,#030724);text-shadow:0 0 6px #0af;
     clip-path:polygon(6% 0,94% 0,100% 50%,94% 100%,6% 100%,0 50%);}
 
-  /* ---------- 賠率表 ---------- */
-  #oddsFrame{flex:1 1 auto;border:2px solid #6a1010;border-radius:6px;background:#180404;
-    box-shadow:inset 0 0 14px #400;padding:3px 4px;display:flex;flex-direction:column;
+  /* ---------- 賠率表（照片配色：藍框深底、高等級紅/中綠/低藍、目前等級黃橘整行反白） ---------- */
+  #oddsFrame{flex:1 1 auto;border:2px solid #2244cc;border-radius:6px;background:#04051d;
+    box-shadow:inset 0 0 14px #113,0 0 8px #23f;padding:3px 4px;display:flex;flex-direction:column;
     min-height:0;overflow:hidden;}
   #oddsHead{display:flex;justify-content:space-around;margin-bottom:2px;}
-  #oddsHead div{flex:1;text-align:center;background:#301;color:#f88;border:1px solid #611;
+  #oddsHead div{flex:1;text-align:center;background:#071040;color:#8fd6ff;border:1px solid #235;
     font-size:clamp(7px,0.9vw,10px);padding:1px 0;border-radius:3px;margin:0 1px;}
   #oddsTable{flex:1 1 auto;display:flex;flex-direction:column-reverse;min-height:0;overflow:hidden;}
   .oddsRow{flex:1 1 0;display:flex;align-items:center;border-radius:3px;}
   .oddsRow div{flex:1;text-align:center;font-weight:900;
     font-size:clamp(9px,1.5vh,16px);letter-spacing:1px;}
-  .oddsRow.cur{animation:rowBreath 1s ease-in-out alternate infinite;}
-  .oddsRow.cur div{animation:lvBlink .35s alternate infinite;}
+  .oddsRow.cur{background:linear-gradient(180deg,#ffe14a 0%,#ff9000 100%);
+    box-shadow:0 0 10px #fc0;animation:curPulse .5s ease-in-out alternate infinite;}
+  .oddsRow.cur div{color:#5a1500 !important;text-shadow:0 0 1px #a40;}
+  @keyframes curPulse{from{filter:brightness(.92);}to{filter:brightness(1.3);}}
   /* 押注時由目前等級往上掃過的閃光：每行亮起後淡出，前一行滅一半時下一行才亮 */
   .oddsRow.scan{animation:scanFade .2s linear forwards;}
   @keyframes scanFade{from{background-color:rgba(255,255,255,.34);}to{background-color:transparent;}}
@@ -297,31 +334,45 @@
         <div class="bonus" id="bnPlus">
           <div class="label">PLUS ONE</div>
           <div class="ball">
-            <div class="tier" id="plusHTier">橫 +1</div>
-            <div class="tier" id="plusVTier">直 +1</div>
+            <div id="plusGrid"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
           </div>
         </div>
         <div class="bonus" id="bnCorner">
           <div class="label">4CORNER</div>
           <div class="ball">
-            <div class="tier" id="corner500">500</div>
-            <div class="tier" id="corner200">200</div>
+            <div id="cornerIcon"><b></b><b></b><b></b><b></b></div>
+            <div class="tierNum" id="corner500">500</div>
+            <div class="tierNum" id="corner200">200</div>
           </div>
         </div>
         <div class="bonus" id="bnBonus">
           <div class="label">BONUS GAME</div>
           <div class="ball">
-            <div class="tier" id="bonusYellow">YELLOW</div>
-            <div class="tier" id="bonusRed">RED</div>
+            <svg class="saucer" id="bonusYellow" viewBox="0 0 40 22">
+              <path class="dome" d="M11 13 Q20 1 29 13 Z"/>
+              <ellipse class="rim rimY" cx="20" cy="14" rx="15" ry="5"/>
+            </svg>
+            <svg class="saucer" id="bonusRed" viewBox="0 0 40 22">
+              <path class="dome" d="M11 13 Q20 1 29 13 Z"/>
+              <ellipse class="rim rimR" cx="20" cy="14" rx="15" ry="5"/>
+            </svg>
           </div>
         </div>
         <div class="bonus" id="bnOdds">
           <div class="label">ODDS UP</div>
           <div class="ball">
-            <div class="tier" id="odds2up">2UP</div>
-            <div class="tier" id="odds1up">1UP</div>
+            <svg id="oddsIcon" viewBox="0 0 40 20">
+              <ellipse cx="20" cy="15" rx="12" ry="4" fill="none" stroke="#b08800" stroke-width="2.5"/>
+              <circle cx="20" cy="7" r="6" fill="#ffd23a"/>
+            </svg>
+            <div id="oddsTiers">
+              <span class="tierNum" id="odds1up">1UP</span>
+              <span class="tierNum" id="odds2up">2UP</span>
+              <span class="tierNum" id="oddsX2t">X2</span>
+            </div>
           </div>
         </div>
+        <div id="oddsX2Bubble">ODDS<br>X2</div>
       </div>
       <div id="title">BINGO PLANET +</div>
       <div id="midArea">
@@ -336,7 +387,7 @@
               <div class="quadMark" id="qmD">D</div>
             </div>
           </div>
-          <div id="oddsX">ODDS X1</div>
+          <div id="oddsX">ODDS X2</div>
         </div>
         <div id="oddsCol">
           <div id="oddsFrame">
@@ -434,11 +485,12 @@ const RESET_DELAY   = 10000;  // 結算後 10 秒重新開局
 const S = {
   credits: 0, paid: 0, win: 0, bet: 0, game: 1,
   level: 1,                 // 押注等級 1~10
-  oddsUpStage: 0,           // 0 / 1(1UP) / 2(2UP)，第四球進黃框洞才生效（派彩等級 +1/+2）
+  oddsUpStage: 0,           // 0 / 1(1UP) / 2(2UP) / 3(X2)，黃球進黃框洞才生效
   cornerStage: 0,           // 0 / 1(200) / 2(500)，四角號碼齊才給分
-  bonusYellow: false,       // BONUS GAME 黃燈：第四球（黃球）進黃框洞則下一局免費
-  bonusRed: false,          // BONUS GAME 紅燈：第四球（黃球）進紅框洞則下一局免費
-  ball4Yellow: false,       // 第四球是否為黃球（70% 機率），白球不觸發第四球相關獎勵
+  bonusYellow: false,       // BONUS GAME 黃燈：第五球（紅球）進黃框洞則下一局免費
+  bonusRed: false,          // BONUS GAME 紅燈：第五球（紅球）進紅框洞則下一局免費
+  ball4Yellow: false,       // 第四球是否為黃球（70% 機率），白球不觸發 ODDS UP
+  ball5Red: false,          // 第五球是否為紅球（70% 機率），白球不觸發 BONUS GAME
   plusH: false,             // PLUS ONE 橫向：橫向 2 個以上連續號碼時連線數 +1
   plusV: false,             // PLUS ONE 縱向
   bettingOpen: false,       // 只在開局 30 秒倒數期間可下注
@@ -515,9 +567,10 @@ gridEl.addEventListener("pointerdown", e=>{
 
 (function buildOddsTable(){
   const t = $("oddsTable");
-  // column-reverse：等級 1 在最下、等級 10 在最上（同實機面板）
-  const colors = ["#3a3a4a","#39ff6a","#39ff6a","#39ff6a","#39ff6a",
-                  "#ff9d33","#ff6a33","#ff4d4d","#ff3333","#ffdf3a"];
+  // column-reverse：等級 1 在最下、等級 10 在最上
+  // 照片配色：低等級（1~2）藍、中等級（3~6）綠、高等級（7~10）紅
+  const colors = ["#3fa9ff","#3fa9ff","#41e05a","#41e05a","#41e05a","#41e05a",
+                  "#ff5540","#ff5540","#ff5540","#ff4040"];
   const hexToRgba = (hex, a) => {
     const n = parseInt(hex.slice(1), 16);
     return "rgba(" + (n>>16&255) + "," + (n>>8&255) + "," + (n&255) + "," + a + ")";
@@ -552,21 +605,26 @@ function refreshScores(){
   $("vPaid").textContent = S.paid;
   $("vBet").textContent = S.bet;
   $("vCredits").textContent = S.credits;
+  // 場上 credits 隨時快照到 localStorage（live），手機直接關頁也不會遺失，下次進來自動取回
+  if(playerName) persistPlayer(r=>{ r.live = S.credits; });
   $("vGame").textContent = S.game;
-  $("oddsX").textContent = "ODDS X" + S.level;
+  // 卡片下方的「ODDS X2」為固定規則標示（斜線得分兩倍），不隨等級變動
   document.querySelectorAll(".oddsRow").forEach(r=>r.classList.remove("cur"));
   const cur = $("odds_lv"+S.level); if(cur) cur.classList.add("cur");
 }
 function refreshBonusUI(){
-  $("plusHTier").classList.toggle("lit", S.plusH);
-  $("plusVTier").classList.toggle("lit", S.plusV);
-  // 500 亮時 200 熄掉，避免誤會；ODDS UP 同理
+  // PLUS ONE：橫向中獎亮星星那一橫排、縱向亮直排
+  $("plusGrid").classList.toggle("h", S.plusH);
+  $("plusGrid").classList.toggle("v", S.plusV);
+  // 500 亮時 200 熄掉，避免誤會
   $("corner200").classList.toggle("lit", S.cornerStage === 1);
   $("corner500").classList.toggle("lit", S.cornerStage === 2);
   $("bonusRed").classList.toggle("lit", S.bonusRed);
   $("bonusYellow").classList.toggle("lit", S.bonusYellow);
+  // ODDS UP 三階：1UP / 2UP / X2（得分兩倍），互斥顯示
   $("odds1up").classList.toggle("lit", S.oddsUpStage === 1);
   $("odds2up").classList.toggle("lit", S.oddsUpStage === 2);
+  $("oddsX2t").classList.toggle("lit", S.oddsUpStage === 3);
   $("bnPlus").querySelector(".ball").classList.toggle("active", S.plusH || S.plusV);
   $("bnCorner").querySelector(".ball").classList.toggle("active", S.cornerStage > 0);
   $("bnBonus").querySelector(".ball").classList.toggle("active", S.bonusYellow || S.bonusRed);
@@ -648,9 +706,15 @@ function placeBet(n){
   else if(S.cornerStage < 1 && Math.random() < P_CORNER_200 * mult){ S.cornerStage = 1; showMsg("4CORNER 200 !", 1500); }
   if(!S.bonusYellow && Math.random() < P_BONUS_Y * mult){ S.bonusYellow = true; showMsg("BONUS GAME 黃 !", 1500); }
   if(!S.bonusRed && Math.random() < P_BONUS_R * mult){ S.bonusRed = true; showMsg("BONUS GAME 紅 !", 1500); }
-  if(S.oddsUpStage < 2 && Math.random() < P_ODDSUP * mult){
-    S.oddsUpStage++;
-    showMsg("ODDS " + S.oddsUpStage + "UP !", 2000);
+  // ODDS UP 三階：1UP → 2UP → X2；押注等級 9（768）以上時直接跳 X2（得分兩倍）
+  if(S.oddsUpStage < 3 && Math.random() < P_ODDSUP * mult){
+    if(S.level >= 9){
+      S.oddsUpStage = 3;
+      showMsg("ODDS X2 !", 2000);
+    } else if(S.oddsUpStage < 2){
+      S.oddsUpStage++;
+      showMsg("ODDS " + S.oddsUpStage + "UP !", 2000);
+    }
   }
   // 中央十字亮燈：點亮五格（中心與上下左右）之一，亮燈視同該號碼進球
   if(Math.random() < P_CROSS * mult){
@@ -945,10 +1009,18 @@ const balls = [];  // {mesh,x,z,vx,vz,state:"rolling"|"sinking"|"landed",hole,la
 
 function launchBall(ballIndex){
   const mesh = new THREE.Mesh(ballGeo, ballMat.clone());
-  // 第四球若為黃球，以黃色外觀呈現
-  if(ballIndex === 4 && S.ball4Yellow){
+  // 球色（如實機）：第 1~3 球藍色半透明；第 4 球可能是黃球；第 5 球可能是紅球
+  if(ballIndex <= 3){
+    mesh.material.color.set(0x4a8cff);
+    mesh.material.emissive.set(0x102a66);
+    mesh.material.transparent = true;
+    mesh.material.opacity = 0.65;
+  } else if(ballIndex === 4 && S.ball4Yellow){
     mesh.material.color.set(0xffd23a);
     mesh.material.emissive.set(0x775500);
+  } else if(ballIndex === 5 && S.ball5Red){
+    mesh.material.color.set(0xff3b30);
+    mesh.material.emissive.set(0x661008);
   }
   scene.add(mesh);
   const a = -Math.PI/2;                 // 固定從畫面上方發球
@@ -1104,9 +1176,18 @@ function clearTimers(){ timers.forEach(clearTimeout); timers = []; }
 
 function startRound(){
   S.phase = "balls";
-  S.landedBalls = []; S.ball4Hole = 0; S.ball4Yellow = false; S.win = 0;
+  S.landedBalls = []; S.ball4Hole = 0; S.ball4Yellow = false; S.ball5Red = false; S.win = 0;
   launched = 0;
   holes.forEach(h => h.occupied = false);
+  // 每一局賓果盤的數字都重新亂數排列
+  (function shuffleCard(){
+    const nums = Array.from({length:25},(_,i)=>i+1);
+    for(let i = nums.length-1; i > 0; i--){
+      const j = Math.floor(Math.random()*(i+1));
+      [nums[i],nums[j]] = [nums[j],nums[i]];
+    }
+    S.card = nums;
+  })();
   $("line3").classList.remove("won"); $("line4").classList.remove("won"); $("line5").classList.remove("won");
   cellEls.forEach(e => e.classList.remove("lineWin"));
 
@@ -1160,10 +1241,14 @@ function fireNext(){
   launched++;
   if(launched > 5) return;
   if(launched === 4) S.ball4Yellow = Math.random() < 0.7;   // 第四球 70% 機率為黃球
+  if(launched === 5) S.ball5Red = Math.random() < 0.7;      // 第五球 70% 機率為紅球
   launchBall(launched);
   if(launched === 4){
     showMsg(S.ball4Yellow ? "第 4 球：黃球！" : "第 4 球：白球", 2000);
     setStatus("第 4 球（" + (S.ball4Yellow ? "黃球" : "白球") + "）飛行中");
+  } else if(launched === 5){
+    showMsg(S.ball5Red ? "第 5 球：紅球！" : "第 5 球：白球", 2000);
+    setStatus("第 5 球（" + (S.ball5Red ? "紅球" : "白球") + "）飛行中");
   } else {
     setStatus("第 " + launched + " 球發射");
   }
@@ -1222,11 +1307,18 @@ function scoreRound(){
   const markedIdx = currentMarkedIdx();   // 十字亮燈的格子視同該號碼進球
   let total = 0;
   const counts = {3:0,4:0,5:0};
-  // ODDS UP：燈亮不代表中獎，第四球必須是「黃球」且進黃框洞（5/15/25）才生效，派彩等級提升 1 或 2 級
-  let payLevel = S.level;
-  if(S.oddsUpStage > 0 && S.ball4Yellow && YELLOW_HOLES.has(S.ball4Hole)){
-    payLevel = Math.min(10, payLevel + S.oddsUpStage);
-    showMsg("ODDS " + S.oddsUpStage + "UP 生效！以等級 " + payLevel + " 派彩", 3000);
+  // ODDS UP：燈亮不代表中獎，第四球必須是「黃球」且進黃框洞（5/15/25）才生效
+  // 1UP/2UP = 派彩等級提升 1 或 2 級；X2 = 本局得分兩倍
+  let payLevel = S.level, winX2 = false;
+  const oddsHit = S.oddsUpStage > 0 && S.ball4Yellow && YELLOW_HOLES.has(S.ball4Hole);
+  if(oddsHit){
+    if(S.oddsUpStage === 3){
+      winX2 = true;
+      showMsg("ODDS X2 生效！本局得分兩倍", 3000);
+    } else {
+      payLevel = Math.min(10, payLevel + S.oddsUpStage);
+      showMsg("ODDS " + S.oddsUpStage + "UP 生效！以等級 " + payLevel + " 派彩", 3000);
+    }
   }
   const pay = PAYTABLE[payLevel-1];
   const winCells = new Set();
@@ -1239,7 +1331,8 @@ function scoreRound(){
       if(isCol && S.plusV && lineHasRun2(line, markedIdx)) c = Math.min(5, c + 1);
       if(c >= 3){
         counts[c]++;
-        total += pay[c-3];
+        // ODDS X2 規則標示：斜線（兩條對角線）的得分為兩倍
+        total += pay[c-3] * (li >= 10 ? 2 : 1);
         line.forEach(i => { if(markedIdx.has(i)) winCells.add(i); });
       }
     });
@@ -1254,13 +1347,16 @@ function scoreRound(){
       total += bonus;
       showMsg("4CORNER +" + bonus + " !", 2500);
     }
-    // BONUS GAME：燈亮且第四球是「黃球」並進對應色框的洞才中獎（黃框 5/15/25、紅框 10/20），下一局免費
-    if(S.ball4Hole && S.ball4Yellow){
-      const hitYellow = S.bonusYellow && YELLOW_HOLES.has(S.ball4Hole);
-      const hitRed = S.bonusRed && RED_HOLES.has(S.ball4Hole);
+    // ODDS UP X2：中獎則本局總得分兩倍
+    if(winX2) total *= 2;
+    // BONUS GAME：燈亮且第五球是「紅球」並進對應色框的洞才中獎（黃框 5/15/25、紅框 10/20），下一局免費
+    const ball5Hole = S.landedBalls[4] || 0;
+    if(ball5Hole && S.ball5Red){
+      const hitYellow = S.bonusYellow && YELLOW_HOLES.has(ball5Hole);
+      const hitRed = S.bonusRed && RED_HOLES.has(ball5Hole);
       if(hitYellow || hitRed){
         S.nextFree = true; S.nextFreeLevel = S.level; S.nextFreeBet = S.bet;
-        // 免費局贈送本局的獎勵燈號
+        // 免費局贈送本局的獎勵燈號與送燈
         S.nextFreeLights = {plusH:S.plusH, plusV:S.plusV, cornerStage:S.cornerStage,
                             bonusYellow:S.bonusYellow, bonusRed:S.bonusRed, oddsUpStage:S.oddsUpStage,
                             crossLit:Array.from(S.crossLit)};
@@ -1358,18 +1454,18 @@ async function enterGame(name){
       ps[name] = remote; store.players = ps;
     }
   }catch(e){}
-  // 取回上次寄存的分數繼續玩（用累加避免覆蓋場上既有的 credits）
+  // 取回上次寄存的分數（寄幣 + 上次未寄幣就關頁的場上快照）繼續玩
   persistPlayer(r=>{
-    sessionCarry = r.banked || 0;
+    sessionCarry = (r.banked || 0) + (r.live || 0);
     S.credits += sessionCarry;
-    r.banked = 0;
+    r.banked = 0; r.live = 0;
   });
   sessionIn = 0;
   // 把「已提領」狀態同步上雲，其他裝置才不會重複取回同一筆寄幣
   pushGlobal();
   $("playerName").textContent = playerName;
   refreshScores();
-  setStatus("歡迎 " + playerName + "！按「投幣」增加 CREDITS（+100/次）");
+  setStatus("歡迎 " + playerName + "！已取回寄幣 " + sessionCarry + "，按「投幣」增加 CREDITS（+100/次）");
 }
 $("creditBtn").addEventListener("click", ()=>{
   S.credits += 100;
@@ -1382,6 +1478,7 @@ function settleSession(){
   const profit = S.credits - sessionIn - sessionCarry;
   persistPlayer(r=>{
     r.banked = S.credits;
+    r.live = 0;                        // 已寄存，清掉場上快照避免重複取回
     r.totalScore = (r.totalScore || 0) + profit;
   });
   sessionIn = 0; sessionCarry = 0;
@@ -1396,12 +1493,15 @@ $("bankBtn").addEventListener("click", ()=>{
   if(!confirm("將離開遊戲，確定嗎？")) return;
   bankOut();
 });
-// 關閉頁面時自動寄幣結算，避免分數遺失
-window.addEventListener("beforeunload", ()=>{
+// 頁面關閉/切到背景時再補存一次場上快照（iOS Safari 不觸發 beforeunload，改用 pagehide/visibilitychange）
+function saveLiveSnapshot(){
   if(playerName && $("rankScreen").style.display === "none"){
-    settleSession();
+    persistPlayer(r=>{ r.live = S.credits; });
   }
-});
+}
+window.addEventListener("pagehide", saveLiveSnapshot);
+window.addEventListener("beforeunload", saveLiveSnapshot);
+document.addEventListener("visibilitychange", ()=>{ if(document.hidden) saveLiveSnapshot(); });
 /* 跨裝置排行榜後端（零帳號、自我修復）：
    - jsonblob 當即時收件匣，瀏覽器直接寫入（網址記在 repo 的 lb-config.json）
    - GitHub Actions 排程每 6 小時把收件匣合併進 leaderboard.json 永久保存並延長 blob 壽命，
@@ -1474,9 +1574,9 @@ $("backBtn").addEventListener("click", ()=>{
   $("rankScreen").style.display = "none";
   // 取回寄幣（若剛寄過），不影響場上既有 credits，並重新起算本次遊玩
   persistPlayer(r=>{
-    sessionCarry = r.banked || 0;
+    sessionCarry = (r.banked || 0) + (r.live || 0);
     S.credits += sessionCarry;
-    r.banked = 0;
+    r.banked = 0; r.live = 0;
   });
   sessionIn = 0;
   pushGlobal();
