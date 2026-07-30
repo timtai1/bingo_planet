@@ -220,8 +220,14 @@
     box-shadow:0 0 12px #fc0;animation:bonusGlow .3s alternate infinite;}
 
   /* ---------- 底部合併列（流星 + 計分 + 按鈕） ---------- */
-  #meteor{position:relative;width:52px;height:34px;min-width:34px;border:2px solid #4a5;border-radius:50%;
-    background:radial-gradient(circle at 60% 40%,#031,#010b04);overflow:hidden;flex:0 1 auto;}
+  /* 流星圈為正圓形，兼作球窗：顯示即將發射的球號 */
+  #meteor{position:relative;width:44px;height:44px;min-width:36px;border:2px solid #4a5;border-radius:50%;
+    background:radial-gradient(circle at 60% 40%,#031,#010b04);overflow:hidden;flex:0 0 auto;}
+  #ballIndicator{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;z-index:2;}
+  #ballNum{width:62%;height:62%;border-radius:50%;display:none;align-items:center;justify-content:center;
+    font-weight:900;font-size:clamp(11px,2vh,16px);color:#03203a;
+    background:radial-gradient(circle at 35% 30%,#cfe9ff,#4a8cff);
+    box-shadow:0 0 8px rgba(140,190,255,.8);}
   .star{position:absolute;width:2px;height:2px;border-radius:50%;background:#bfe;
     box-shadow:0 0 3px #8fc,0 0 6px #4c8;}
   /* 流星由圈圈右上往左下衝：亮頭在左端（前進方向），尾巴淡出朝右上 */
@@ -310,7 +316,8 @@
     /* 計分欄 */
     .scoreCol{font-size:clamp(7px,2.4vw,11px);}
     .scoreRow .v{min-width:3em;}
-    #meteor{width:36px;height:24px;}
+    #meteor{width:34px;height:34px;min-width:34px;}
+    #ballNum{font-size:clamp(9px,3vw,13px);}
     /* 按鈕區：隱藏 A~D（改點賓果盤旋轉）、BET 放大、投幣/寄幣並排方形 */
     #buttonPane{min-height:0;flex:0 0 auto;gap:6px;padding:2px 2px 4px;}
     .btnLabel{display:none;}
@@ -424,7 +431,7 @@
     </div>
     <div class="hsplit" id="hsplit"></div>
     <div id="buttonPane">
-      <div id="meteor"></div>
+      <div id="meteor"><div id="ballIndicator"><span id="ballNum"></span></div></div>
       <div class="scoreCol">
         <div class="scoreRow"><span class="k">WIN</span><span class="v" id="vWin">0</span></div>
         <div class="scoreRow"><span class="k">PAID</span><span class="v" id="vPaid">0</span></div>
@@ -690,6 +697,20 @@ function showMsg(text, ms){
 }
 function hideMsg(){ $("msg").classList.remove("show"); }
 function setStatus(t){ $("statusLine").textContent = t; }
+// 球窗指示：顯示「即將發射 / 飛行中」的球號與球色（同實機左下角的球窗）
+const BALL_TINTS = {
+  blue:   "radial-gradient(circle at 35% 30%,#cfe9ff,#4a8cff)",
+  yellow: "radial-gradient(circle at 35% 30%,#fff3c0,#ffd23a)",
+  red:    "radial-gradient(circle at 35% 30%,#ffd0c8,#ff3b30)",
+  white:  "radial-gradient(circle at 35% 30%,#ffffff,#aab8cc)"
+};
+function showBallIndicator(n, tint){
+  const el = $("ballNum");
+  el.textContent = n;
+  el.style.background = BALL_TINTS[tint] || BALL_TINTS.blue;
+  el.style.display = "flex";
+}
+function hideBallIndicator(){ $("ballNum").style.display = "none"; }
 function meteorFx(){
   // 依圈圈實際大小計算軌跡：從右上往左下衝
   const m = $("meteor"), fx = document.createElement("div");
@@ -1233,6 +1254,7 @@ function startRound(){
   S.bettingOpen = true; S.rotateFree = true;
   S.spin10Window = false; S.roundCounted = false;
   refreshScores(); refreshBonusUI(); refreshCard();
+  showBallIndicator(1, "blue");   // 球窗預告：即將發射第 1 球
   // 開局先倒數 30 秒（顯示在轉盤中央）：只有這段時間可以下注，也可自由按 A~D 調整數字位置
   S.phase = "countdown";
   let cd = 30;
@@ -1262,6 +1284,11 @@ function fireNext(){
   if(launched === 4) S.ball4Yellow = Math.random() < 0.7;   // 第四球 70% 機率為黃球
   if(launched === 5) S.ball5Red = Math.random() < 0.7;      // 第五球 70% 機率為紅球
   launchBall(launched);
+  // 球窗顯示目前這顆球的號碼與顏色
+  showBallIndicator(launched,
+    launched <= 3 ? "blue" :
+    launched === 4 ? (S.ball4Yellow ? "yellow" : "white") :
+    (S.ball5Red ? "red" : "white"));
   if(launched === 4){
     showMsg(S.ball4Yellow ? "第 4 球：黃球！" : "第 4 球：白球", 2000);
     setStatus("第 4 球（" + (S.ball4Yellow ? "黃球" : "白球") + "）飛行中");
@@ -1281,6 +1308,7 @@ function onBallLanded(b, h){
     // 第三球入洞：轉盤周圍燈全亮，10 秒內順時針逐顆熄滅代表倒數
     // 燈全滅之前仍可「自由」按 A~D 旋轉，燈全滅後才鎖定
     setStatus("外圈燈熄滅前可自由按 A~D 旋轉數字");
+    showBallIndicator(4, "white");   // 球窗預告：即將發射第 4 球（球色發射時才決定）
     startRimCountdown(10000, ()=>{
       S.rotateFree = false;
       fireNext();                    // 第 4 球
@@ -1296,6 +1324,7 @@ function onBallLanded(b, h){
     // 第四顆球落洞之後才開始倒數，這 10 秒內同樣可按住 BET 10 + A~D 付費旋轉
     S.spin10Window = true;
     setStatus("第 5 球倒數中：按住 BET 10 再按 A~D 旋轉數字（每次 10 credits，成功率 10%）");
+    showBallIndicator(5, "white");   // 球窗預告：即將發射第 5 球
     let rc = 10;
     const sm = $("spinMsg");
     sm.style.display = "block";
@@ -1329,6 +1358,7 @@ const LINES = (function(){
 
 function scoreRound(){
   S.phase = "scoring";
+  hideBallIndicator();
   const markedIdx = currentMarkedIdx();   // 十字亮燈的格子視同該號碼進球
   let total = 0;
   const counts = {3:0,4:0,5:0};
