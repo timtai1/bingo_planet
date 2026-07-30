@@ -439,7 +439,6 @@
         <div class="btnWrap"><button class="abcd" id="btnC">C</button><div class="btnLabel">左下</div></div>
         <div class="btnWrap"><button class="abcd" id="btnD">D</button><div class="btnLabel">右下</div></div>
       </div>
-      <div class="btnWrap"><button class="betBtn" id="betBtn1">BET<br>1</button></div>
       <div class="btnWrap"><button class="betBtn bet10" id="betBtn10">BET<br>10</button></div>
       <div class="btnWrap" id="coinBtns">
         <button id="creditBtn">投幣<br>+100</button>
@@ -1455,7 +1454,7 @@ function bindBetButton(btn, n){
   btn.addEventListener("touchstart", down, {passive:false});
   ["mouseup","mouseleave","touchend"].forEach(ev => btn.addEventListener(ev, up));
 }
-bindBetButton($("betBtn1"), 1);
+// BET 1 實體按鈕已移除（避免底部欄擁擠），鍵盤空白鍵仍可押 BET 1
 bindBetButton($("betBtn10"), 10);
 /* ---------------- 玩家帳戶 / 投幣 / 寄幣 / 排行榜（localStorage 記錄） ---------------- */
 const store = {
