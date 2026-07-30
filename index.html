@@ -109,10 +109,12 @@
     letter-spacing:1px;}
   .tierNum.lit{color:#fff;text-shadow:0 0 6px #fff,0 0 14px #4af;animation:bonusGlow .4s alternate infinite;}
   #corner500{font-size:clamp(11px,1.4vw,17px);}
-  /* BONUS GAME：上下兩顆帶黃球的框洞（上黃框、下紅框），球一半在框內，點亮發光 */
+  /* BONUS GAME：上下兩顆帶黃球的框洞（上黃框、下紅框）。
+     圖層：後緣弧線在球後面、球蓋過後緣、前緣弧線蓋住球下半 → 球看起來一半在洞裡 */
   .saucer{width:70%;height:38%;}
   .saucer .sball{fill:#b8952a;}
-  .saucer .rim{fill:#0a1440;stroke-width:2.5;}
+  .saucer .rimBack{stroke-width:2.5;}
+  .saucer .rimFront{fill:#0a1440;stroke-width:2.5;}
   .saucer .rimY{stroke:#b08800;} .saucer .rimR{stroke:#992222;}
   .saucer.lit .sball{fill:#ffe14a;}
   .saucer.lit .rimY{stroke:#ffd60a;} .saucer.lit .rimR{stroke:#ff4433;}
@@ -128,17 +130,20 @@
   .oddsHalf.lit em{color:#fff;text-shadow:0 0 6px #fff,0 0 12px #4af;animation:bonusGlow .4s alternate infinite;}
   /* ODDS X2 小泡泡：位於 ODDS UP 球的右上角（同一組），中 X2 時點亮 */
   #bnOdds{position:relative;}
-  #oddsX2Bubble{position:absolute;top:-2px;right:-2px;width:min(4vh,30px);height:min(4vh,30px);z-index:3;
-    border-radius:50%;background:radial-gradient(circle at 35% 30%,#2a52ff,#0a1670);border:2px solid #46f;
-    display:flex;align-items:center;justify-content:center;text-align:center;line-height:1.05;
-    font-size:clamp(5px,0.65vw,8px);font-weight:900;color:#bfe9ff;text-shadow:0 0 4px #4af;}
+  #oddsX2Bubble{position:absolute;top:-1px;right:2px;width:min(2vh,15px);height:min(2vh,15px);z-index:3;
+    border-radius:50%;background:radial-gradient(circle at 35% 30%,#2a52ff,#0a1670);border:1px solid #46f;
+    display:flex;align-items:center;justify-content:center;text-align:center;line-height:1;
+    font-size:clamp(4px,0.45vw,6px);font-weight:900;color:#bfe9ff;text-shadow:0 0 3px #4af;}
   #oddsX2Bubble.lit{border-color:#ffd60a;color:#ffd60a;box-shadow:0 0 14px #fc0;
     animation:bonusGlow .4s alternate infinite;}
 
-  /* ---------- 標題 ---------- */
-  #title{text-align:center;font-size:clamp(14px,2.2vw,26px);font-weight:900;font-style:italic;
-    letter-spacing:3px;color:#66e0ff;
-    text-shadow:0 0 8px #08f,0 0 20px #05f,2px 2px 0 #013;margin:2px 0 4px;}
+  /* ---------- 中獎 BINGO 大標誌（如實機照片的橘紅斜體字） ---------- */
+  #bingoSplash{position:absolute;top:4%;left:50%;transform:translateX(-50%) rotate(-8deg);z-index:10;
+    font-size:clamp(44px,9vw,110px);font-weight:900;font-style:italic;letter-spacing:2px;
+    background:linear-gradient(180deg,#ffd23a 0%,#ff7a00 55%,#ff3a00 100%);
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+    filter:drop-shadow(0 0 10px #f80) drop-shadow(3px 4px 0 #801515);
+    display:none;pointer-events:none;white-space:nowrap;}
 
   /* ---------- 中段：卡片 + 賠率表 ---------- */
   #midArea{flex:1 1 auto;display:flex;gap:6px;min-height:0;}
@@ -212,9 +217,7 @@
   .lineBox.won{background:#c78500;color:#fff;border-color:#ffd60a;
     box-shadow:0 0 12px #fc0;animation:bonusGlow .3s alternate infinite;}
 
-  /* ---------- 底部資訊列 ---------- */
-  #infoBar{display:flex;align-items:center;gap:8px;border-top:2px solid #223bd0;
-    margin-top:4px;padding-top:3px;font-size:clamp(10px,1.3vw,15px);}
+  /* ---------- 底部合併列（流星 + 計分 + 按鈕） ---------- */
   #meteor{position:relative;width:64px;height:40px;border:2px solid #4a5;border-radius:50%;
     background:radial-gradient(circle at 60% 40%,#031,#010b04);overflow:hidden;flex:0 0 auto;}
   .star{position:absolute;width:2px;height:2px;border-radius:50%;background:#bfe;
@@ -226,13 +229,13 @@
   @keyframes meteorMove{
     from{transform:translate(var(--sx),var(--sy)) rotate(-25deg);opacity:1;}
     to{transform:translate(var(--ex),var(--ey)) rotate(-25deg);opacity:0;}}
-  #scoreCols{flex:1 1 auto;display:flex;gap:10px;}
-  .scorePair{display:flex;flex-direction:column;gap:1px;}
-  .scorePair .k{color:#9f9;font-size:.8em;}
-  .scorePair .v{color:#dfd;font-weight:bold;text-shadow:0 0 6px #4f4;font-family:monospace;}
-  #gameBox{flex:0 0 auto;border:2px solid #86f;border-radius:4px;background:#204;
-    padding:2px 8px;text-align:center;color:#fdb;}
-  #gameBox .k{font-size:.7em;color:#faf;}
+  /* WIN/PAID 一欄上下兩排、BET/CREDITS 一欄上下兩排，數字靠右（同實機） */
+  .scoreCol{display:flex;flex-direction:column;gap:2px;font-size:clamp(10px,1.3vw,15px);
+    min-width:0;flex:0 1 auto;}
+  .scoreRow{display:flex;justify-content:space-between;align-items:baseline;gap:8px;}
+  .scoreRow .k{color:#8f8;font-size:.85em;}
+  .scoreRow .v{color:#ffe066;font-weight:bold;text-shadow:0 0 6px #fa0;font-family:monospace;
+    text-align:right;min-width:3.5em;}
 
   /* ---------- 狀態訊息 ---------- */
   #msg{position:absolute;top:38%;left:50%;transform:translate(-50%,-50%);
@@ -251,24 +254,26 @@
   .abcd:active,.abcd.held{transform:translateY(3px);box-shadow:0 1px 0 #012,0 0 18px #0ff;
     background:radial-gradient(circle at 35% 30%,#3fd0ff,#0a55aa);}
   .abcd:disabled{opacity:.35;cursor:not-allowed;}
-  .betBtn{width:min(12vh,88px);height:min(12vh,88px);border-radius:50%;border:4px solid #f66;
+  .betBtn{width:min(9.6vh,70px);height:min(9.6vh,70px);border-radius:50%;border:3px solid #f66;
     background:radial-gradient(circle at 35% 30%,#ff5040,#7a0a00);color:#fff;
-    font-size:clamp(12px,2.2vh,18px);font-weight:900;cursor:pointer;line-height:1.1;
-    box-shadow:0 5px 0 #300,0 0 16px #f30;}
+    font-size:clamp(11px,1.8vh,15px);font-weight:900;cursor:pointer;line-height:1.1;
+    box-shadow:0 4px 0 #300,0 0 14px #f30;}
   .betBtn:active{transform:translateY(4px);box-shadow:0 1px 0 #300,0 0 26px #ff0;}
   .betBtn:disabled{opacity:.35;cursor:not-allowed;}
   .betBtn.bet10{border-color:#fc6;
     background:radial-gradient(circle at 35% 30%,#ffb340,#7a4a00);
     box-shadow:0 5px 0 #430,0 0 16px #fa0;}
-  #creditBtn{padding:8px 12px;border-radius:8px;border:2px solid #4f6;background:#052;
-    color:#cfc;font-weight:bold;cursor:pointer;font-size:clamp(10px,1.6vh,14px);}
+  #creditBtn{padding:6px 10px;border-radius:8px;border:2px solid #4f6;background:#052;
+    color:#cfc;font-weight:bold;cursor:pointer;font-size:clamp(9px,1.3vh,11px);}
   #creditBtn:active{background:#0a4;}
   /* 寄幣與投幣同尺寸 */
-  #bankBtn{margin-top:4px;padding:8px 12px;border-radius:8px;border:2px solid #fa5;background:#520;
-    color:#fda;font-weight:bold;cursor:pointer;font-size:clamp(10px,1.6vh,14px);width:100%;}
+  #bankBtn{margin-top:4px;padding:6px 10px;border-radius:8px;border:2px solid #fa5;background:#520;
+    color:#fda;font-weight:bold;cursor:pointer;font-size:clamp(9px,1.3vh,11px);width:100%;}
   #bankBtn:active{background:#a40;}
-  #statusLine{width:100%;text-align:center;font-size:clamp(9px,1.4vh,13px);color:#9cf;
-    text-shadow:0 0 4px #05f;order:99;}
+  /* 狀態訊息移到轉盤畫面下方（覆蓋在轉盤上） */
+  #statusLine{position:absolute;left:0;right:0;bottom:5px;text-align:center;z-index:6;
+    font-size:clamp(10px,1.5vh,14px);color:#9cf;text-shadow:0 0 5px #05f,1px 1px 0 #000;
+    pointer-events:none;}
   .btnLabel{font-size:9px;color:#9cf;text-align:center;margin-top:2px;}
   .btnWrap{display:flex;flex-direction:column;align-items:center;}
 
@@ -276,8 +281,7 @@
      所有尺寸以螢幕寬度(vw)為基準再縮小一級，容器一律 overflow:hidden 防止互相重疊 */
   @media (max-aspect-ratio: 1/1){
     #app{flex-direction:column;}
-    #wheelPane{flex:0 0 38%;min-width:0;min-height:110px;width:100%;}
-    #wheelHint{display:none;}
+    #wheelPane{flex:0 0 45%;min-width:0;min-height:110px;width:100%;}
     .vsplit{cursor:row-resize;background:linear-gradient(90deg,#123,#28f,#123);}
     #rightPane{min-width:0;width:100%;flex:1 1 0;min-height:0;overflow:hidden;}
     #playerPane{padding:2px 4px;min-height:0;flex:1 1 0;overflow:hidden;}
@@ -287,7 +291,7 @@
     .bonus .tier{font-size:clamp(6px,1.8vw,8px);padding:0;width:86%;}
     .bonus .icon{font-size:11px;}
     .bonus .label{font-size:clamp(6px,2vw,9px);letter-spacing:0;margin-bottom:1px;}
-    #title{font-size:clamp(10px,3.4vw,15px);letter-spacing:2px;margin:1px 0 2px;}
+    #bingoSplash{font-size:clamp(30px,13vw,60px);}
     /* 賓果卡 */
     #midArea{gap:4px;overflow:hidden;}
     #cardFrame{padding:2px;}
@@ -301,10 +305,10 @@
     .oddsRow div{font-size:clamp(7px,2.6vw,11px);letter-spacing:0;line-height:1;}
     #oddsHead div{font-size:clamp(5px,1.8vw,8px);}
     .lineBox{font-size:clamp(5px,1.8vw,8px);padding:1px 0;line-height:1;}
-    /* 計分列 */
-    #infoBar{font-size:clamp(7px,2.4vw,11px);gap:4px;margin-top:2px;padding-top:2px;}
+    /* 計分欄 */
+    .scoreCol{font-size:clamp(7px,2.4vw,11px);}
+    .scoreRow .v{min-width:3em;}
     #meteor{width:36px;height:24px;}
-    #gameBox{padding:1px 5px;}
     /* 按鈕區：隱藏 A~D（改點賓果盤旋轉）、BET 放大、投幣/寄幣並排方形 */
     #buttonPane{min-height:0;flex:0 0 auto;gap:6px;padding:2px 2px 4px;}
     .btnLabel{display:none;}
@@ -336,7 +340,7 @@
       <button id="pauseBtn">暫停</button>
     </div>
     <div id="spinMsg"></div>
-    <div id="wheelHint">滑鼠拖曳旋轉視角 / 滾輪縮放</div>
+    <div id="statusLine">開局倒數 30 秒內可下注（BET 可長按連押）與旋轉 A~D。</div>
   </div>
   <div class="vsplit" id="vsplit"></div>
   <div id="rightPane">
@@ -360,12 +364,14 @@
           <div class="label">BONUS GAME</div>
           <div class="ball">
             <svg class="saucer" id="bonusYellow" viewBox="0 0 40 24">
-              <circle class="sball" cx="20" cy="10" r="8"/>
-              <ellipse class="rim rimY" cx="20" cy="16" rx="15" ry="6"/>
+              <path class="rimBack rimY" d="M5 16 A15 6 0 0 1 35 16" fill="none"/>
+              <circle class="sball" cx="20" cy="12" r="8"/>
+              <path class="rimFront rimY" d="M5 16 A15 6 0 0 0 35 16 Z"/>
             </svg>
             <svg class="saucer" id="bonusRed" viewBox="0 0 40 24">
-              <circle class="sball" cx="20" cy="10" r="8"/>
-              <ellipse class="rim rimR" cx="20" cy="16" rx="15" ry="6"/>
+              <path class="rimBack rimR" d="M5 16 A15 6 0 0 1 35 16" fill="none"/>
+              <circle class="sball" cx="20" cy="12" r="8"/>
+              <path class="rimFront rimR" d="M5 16 A15 6 0 0 0 35 16 Z"/>
             </svg>
           </div>
         </div>
@@ -373,8 +379,9 @@
           <div class="label">ODDS UP</div>
           <div class="ball">
             <svg id="oddsIcon" viewBox="0 0 40 24">
-              <circle cx="20" cy="10" r="8" fill="#ffd23a"/>
-              <ellipse cx="20" cy="16" rx="14" ry="6" fill="#0a1440" stroke="#b08800" stroke-width="2.5"/>
+              <path d="M6 16 A14 6 0 0 1 34 16" fill="none" stroke="#b08800" stroke-width="2.5"/>
+              <circle cx="20" cy="12" r="8" fill="#ffd23a"/>
+              <path d="M6 16 A14 6 0 0 0 34 16 Z" fill="#0a1440" stroke="#b08800" stroke-width="2.5"/>
             </svg>
             <div id="oddsHalves">
               <div class="oddsHalf" id="odds1up"><span class="bar"></span><em>1UP</em></div>
@@ -384,7 +391,7 @@
           <div id="oddsX2Bubble">ODDS<br>X2</div>
         </div>
       </div>
-      <div id="title">BINGO PLANET +</div>
+      <div id="bingoSplash">BINGO</div>
       <div id="midArea">
         <div id="cardCol">
           <div id="cardFrame">
@@ -411,29 +418,27 @@
           </div>
         </div>
       </div>
-      <div id="infoBar">
-        <div id="meteor"></div>
-        <div id="scoreCols">
-          <div class="scorePair"><span class="k">WIN</span><span class="v" id="vWin">0</span></div>
-          <div class="scorePair"><span class="k">PAID</span><span class="v" id="vPaid">0</span></div>
-          <div class="scorePair"><span class="k">BET</span><span class="v" id="vBet">0</span></div>
-          <div class="scorePair"><span class="k">CREDITS</span><span class="v" id="vCredits">0</span></div>
-        </div>
-        <div id="gameBox"><div class="k">GAME</div><div id="vGame">1</div></div>
-      </div>
       <div id="msg"></div>
     </div>
     <div class="hsplit" id="hsplit"></div>
     <div id="buttonPane">
-      <div id="statusLine">開局倒數 30 秒內可下注（BET 可長按連押）與旋轉 A~D。</div>
+      <div id="meteor"></div>
+      <div class="scoreCol">
+        <div class="scoreRow"><span class="k">WIN</span><span class="v" id="vWin">0</span></div>
+        <div class="scoreRow"><span class="k">PAID</span><span class="v" id="vPaid">0</span></div>
+      </div>
+      <div class="scoreCol">
+        <div class="scoreRow"><span class="k">BET</span><span class="v" id="vBet">0</span></div>
+        <div class="scoreRow"><span class="k">CREDITS</span><span class="v" id="vCredits">0</span></div>
+      </div>
       <div id="quadBtns">
         <div class="btnWrap"><button class="abcd" id="btnA">A</button><div class="btnLabel">左上</div></div>
         <div class="btnWrap"><button class="abcd" id="btnB">B</button><div class="btnLabel">右上</div></div>
         <div class="btnWrap"><button class="abcd" id="btnC">C</button><div class="btnLabel">左下</div></div>
         <div class="btnWrap"><button class="abcd" id="btnD">D</button><div class="btnLabel">右下</div></div>
       </div>
-      <div class="btnWrap"><button class="betBtn" id="betBtn1">BET<br>1</button><div class="btnLabel">押注 1 (Space)</div></div>
-      <div class="btnWrap"><button class="betBtn bet10" id="betBtn10">BET<br>10</button><div class="btnLabel">押注 10 (Enter)</div></div>
+      <div class="btnWrap"><button class="betBtn" id="betBtn1">BET<br>1</button></div>
+      <div class="btnWrap"><button class="betBtn bet10" id="betBtn10">BET<br>10</button></div>
       <div class="btnWrap" id="coinBtns">
         <button id="creditBtn">投幣<br>+100</button>
         <button id="bankBtn">寄幣</button>
@@ -488,7 +493,7 @@ const upgradeChance = lv => lv <= 2 ? 2/30 : 2/50;
 // 洞框顏色：一般藍色，5/10/15/20/25 黃框，1/11/21 紅框
 const YELLOW_HOLES = new Set([5,10,15,20,25]);
 const RED_HOLES = new Set([1,11,21]);
-const BALL_INTERVAL = 10000;   // 前三球每 10 秒發射一顆
+const BALL_INTERVAL = 5000;    // 前三球每 5 秒發射一顆
 const RESET_DELAY   = 10000;  // 結算後 10 秒重新開局
 
 /* ---------------- 遊戲狀態 ---------------- */
@@ -617,7 +622,6 @@ function refreshScores(){
   $("vCredits").textContent = S.credits;
   // 場上 credits 隨時快照到 localStorage（live），手機直接關頁也不會遺失，下次進來自動取回
   if(playerName) persistPlayer(r=>{ r.live = S.credits; });
-  $("vGame").textContent = S.game;
   // 卡片下方的「ODDS X2」為固定規則標示（斜線得分兩倍），不隨等級變動
   document.querySelectorAll(".oddsRow").forEach(r=>r.classList.remove("cur"));
   const cur = $("odds_lv"+S.level); if(cur) cur.classList.add("cur");
@@ -1203,6 +1207,7 @@ function startRound(){
   })();
   $("line3").classList.remove("won"); $("line4").classList.remove("won"); $("line5").classList.remove("won");
   cellEls.forEach(e => e.classList.remove("lineWin"));
+  $("bingoSplash").style.display = "none";
 
   if(S.nextFree){
     // 免費局：贈送前一局的獎勵燈號與等級，仍可下注提升等級
@@ -1379,20 +1384,37 @@ function scoreRound(){
   S.win = total;
   if(total > 0){
     S.credits += total; S.paid += total;
+    // 中獎顯示大大的 BINGO 標誌（如實機照片）
+    $("bingoSplash").style.display = "block";
     showMsg("WIN " + total + " !", 4000);
   } else {
     setStatus("本局未中獎");
   }
   refreshScores();
-  setStatus("結算完成，10 秒後開始下一局");
+  setStatus("結算完成");
   S.phase = "reset";
-  schedule(()=>{
-    // 球從洞落下、清場
-    balls.slice().forEach(removeBall);
-    S.game++;
-    hideMsg();
-    startRound();
-  }, RESET_DELAY);
+  // 局末倒數顯示在轉盤中央並真正倒數
+  let rc = RESET_DELAY / 1000;
+  const sm = $("spinMsg");
+  sm.style.display = "block";
+  sm.textContent = "下一局倒數 " + rc + " 秒";
+  const rcTimer = setInterval(()=>{
+    if(paused) return;
+    rc--;
+    if(rc > 0){
+      sm.textContent = "下一局倒數 " + rc + " 秒";
+    } else {
+      clearInterval(rcTimer);
+      sm.style.display = "none";
+      // 球從洞落下、清場
+      balls.slice().forEach(removeBall);
+      S.game++;
+      hideMsg();
+      $("bingoSplash").style.display = "none";
+      startRound();
+    }
+  }, 1000);
+  timers.push(rcTimer);
 }
 
 /* ---------------- 輸入事件 ---------------- */
