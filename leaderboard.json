@@ -3,15 +3,22 @@
     "banked": 0,
     "totalIn": 13700,
     "playTime": 5157,
-    "ts": 1785337350651,
+    "ts": 1785379465630,
     "playCount": 19,
     "totalScore": 123386
   },
   "阿熹": {
     "banked": 0,
     "totalIn": 4400,
-    "playCount": 7,
-    "ts": 1785338127275,
-    "totalScore": 70566
+    "playCount": 10,
+    "ts": 1785379075244,
+    "totalScore": 83622
+  },
+  "Hrf": {
+    "banked": 69564,
+    "totalIn": 5800,
+    "playCount": 11,
+    "ts": 1785378902468,
+    "totalScore": 110384
   }
 }
