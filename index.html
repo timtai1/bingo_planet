@@ -90,14 +90,16 @@
   .bonus .tier.lit{color:#fff;background:#a00;border-color:#f66;text-shadow:0 0 6px #ff0;
     animation:bonusGlow .4s alternate infinite;}
   .bonus .icon{font-size:18px;line-height:1;}
-  /* PLUS ONE：小格盤 + 星星格；橫向中獎亮星星那一橫排、縱向亮直排 */
+  /* PLUS ONE：小格盤，星星在左上角那一格（放大蓋過框線）；
+     橫拐亮最上面一排、直拐亮最左邊一排 */
   #plusGrid{display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(3,1fr);
     gap:1px;width:66%;height:66%;}
   #plusGrid i{border:1px solid #2b5cd0;background:rgba(4,10,50,.6);position:relative;border-radius:1px;}
-  #plusGrid i:nth-child(5)::after{content:"";position:absolute;inset:10%;background:#ffd60a;
+  #plusGrid i:nth-child(1)::after{content:"";position:absolute;inset:-22%;background:#ffd60a;z-index:2;
+    filter:drop-shadow(0 0 3px #fc0);
     clip-path:polygon(50% 0%,61% 35%,98% 35%,68% 57%,79% 91%,50% 70%,21% 91%,32% 57%,2% 35%,39% 35%);}
-  #plusGrid.h i:nth-child(n+4):nth-child(-n+6){background:#7fe8ff;box-shadow:0 0 6px #7fe8ff;}
-  #plusGrid.v i:nth-child(3n+2){background:#7fe8ff;box-shadow:0 0 6px #7fe8ff;}
+  #plusGrid.h i:nth-child(-n+3){background:#7fe8ff;box-shadow:0 0 6px #7fe8ff;}
+  #plusGrid.v i:nth-child(3n+1){background:#7fe8ff;box-shadow:0 0 6px #7fe8ff;}
   /* 4CORNER：方框四角藍色小方塊 + 500/200 數字 */
   #cornerIcon{width:36%;height:26%;border:1px solid #46c;position:relative;margin-bottom:1px;}
   #cornerIcon b{position:absolute;width:30%;height:36%;background:#39f;box-shadow:0 0 3px #6cf;}
@@ -107,22 +109,31 @@
     letter-spacing:1px;}
   .tierNum.lit{color:#fff;text-shadow:0 0 6px #fff,0 0 14px #4af;animation:bonusGlow .4s alternate infinite;}
   #corner500{font-size:clamp(11px,1.4vw,17px);}
-  /* BONUS GAME：上下兩顆飛碟（上黃框、下紅框），點亮發光 */
-  .saucer{width:64%;height:32%;}
-  .saucer .dome{fill:#26406a;}
+  /* BONUS GAME：上下兩顆帶黃球的框洞（上黃框、下紅框），球一半在框內，點亮發光 */
+  .saucer{width:70%;height:38%;}
+  .saucer .sball{fill:#b8952a;}
   .saucer .rim{fill:#0a1440;stroke-width:2.5;}
   .saucer .rimY{stroke:#b08800;} .saucer .rimR{stroke:#992222;}
-  .saucer.lit .dome{fill:#ff8c1a;}
+  .saucer.lit .sball{fill:#ffe14a;}
   .saucer.lit .rimY{stroke:#ffd60a;} .saucer.lit .rimR{stroke:#ff4433;}
   .saucer.lit{filter:drop-shadow(0 0 5px #fc0);animation:bonusGlow .4s alternate infinite;}
-  /* ODDS UP：黃球入黃框洞圖示 + 1UP/2UP/X2 */
-  #oddsIcon{width:64%;height:36%;}
-  #oddsTiers{display:flex;gap:4px;align-items:baseline;}
-  /* 右上角固定的 ODDS X2 泡泡（斜線兩倍規則標示） */
-  #oddsX2Bubble{flex:0 0 auto;align-self:flex-start;margin-top:2px;width:min(5.5vh,44px);height:min(5.5vh,44px);
+  /* ODDS UP：上半部黃球入黃框洞；下半部左右分區 — 左一條橫線標 1UP、右兩條橫線標 2UP */
+  #oddsIcon{width:78%;height:46%;}
+  #oddsHalves{display:flex;width:88%;height:36%;border-top:1px solid #2b5cd0;}
+  .oddsHalf{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;}
+  .oddsHalf:first-child{border-right:1px solid #2b5cd0;}
+  .oddsHalf .bar{display:block;width:56%;height:2px;background:#2b5cd0;border-radius:1px;}
+  .oddsHalf em{font-style:normal;font-weight:900;font-size:clamp(6px,0.8vw,10px);color:#245a88;line-height:1.1;}
+  .oddsHalf.lit .bar{background:#7fe8ff;box-shadow:0 0 5px #7fe8ff;}
+  .oddsHalf.lit em{color:#fff;text-shadow:0 0 6px #fff,0 0 12px #4af;animation:bonusGlow .4s alternate infinite;}
+  /* ODDS X2 小泡泡：位於 ODDS UP 球的右上角（同一組），中 X2 時點亮 */
+  #bnOdds{position:relative;}
+  #oddsX2Bubble{position:absolute;top:-2px;right:-2px;width:min(4vh,30px);height:min(4vh,30px);z-index:3;
     border-radius:50%;background:radial-gradient(circle at 35% 30%,#2a52ff,#0a1670);border:2px solid #46f;
-    display:flex;align-items:center;justify-content:center;text-align:center;line-height:1.1;
-    font-size:clamp(7px,0.9vw,11px);font-weight:900;color:#bfe9ff;text-shadow:0 0 4px #4af;}
+    display:flex;align-items:center;justify-content:center;text-align:center;line-height:1.05;
+    font-size:clamp(5px,0.65vw,8px);font-weight:900;color:#bfe9ff;text-shadow:0 0 4px #4af;}
+  #oddsX2Bubble.lit{border-color:#ffd60a;color:#ffd60a;box-shadow:0 0 14px #fc0;
+    animation:bonusGlow .4s alternate infinite;}
 
   /* ---------- 標題 ---------- */
   #title{text-align:center;font-size:clamp(14px,2.2vw,26px);font-weight:900;font-style:italic;
@@ -348,31 +359,30 @@
         <div class="bonus" id="bnBonus">
           <div class="label">BONUS GAME</div>
           <div class="ball">
-            <svg class="saucer" id="bonusYellow" viewBox="0 0 40 22">
-              <path class="dome" d="M11 13 Q20 1 29 13 Z"/>
-              <ellipse class="rim rimY" cx="20" cy="14" rx="15" ry="5"/>
+            <svg class="saucer" id="bonusYellow" viewBox="0 0 40 24">
+              <circle class="sball" cx="20" cy="10" r="8"/>
+              <ellipse class="rim rimY" cx="20" cy="16" rx="15" ry="6"/>
             </svg>
-            <svg class="saucer" id="bonusRed" viewBox="0 0 40 22">
-              <path class="dome" d="M11 13 Q20 1 29 13 Z"/>
-              <ellipse class="rim rimR" cx="20" cy="14" rx="15" ry="5"/>
+            <svg class="saucer" id="bonusRed" viewBox="0 0 40 24">
+              <circle class="sball" cx="20" cy="10" r="8"/>
+              <ellipse class="rim rimR" cx="20" cy="16" rx="15" ry="6"/>
             </svg>
           </div>
         </div>
         <div class="bonus" id="bnOdds">
           <div class="label">ODDS UP</div>
           <div class="ball">
-            <svg id="oddsIcon" viewBox="0 0 40 20">
-              <ellipse cx="20" cy="15" rx="12" ry="4" fill="none" stroke="#b08800" stroke-width="2.5"/>
-              <circle cx="20" cy="7" r="6" fill="#ffd23a"/>
+            <svg id="oddsIcon" viewBox="0 0 40 24">
+              <circle cx="20" cy="10" r="8" fill="#ffd23a"/>
+              <ellipse cx="20" cy="16" rx="14" ry="6" fill="#0a1440" stroke="#b08800" stroke-width="2.5"/>
             </svg>
-            <div id="oddsTiers">
-              <span class="tierNum" id="odds1up">1UP</span>
-              <span class="tierNum" id="odds2up">2UP</span>
-              <span class="tierNum" id="oddsX2t">X2</span>
+            <div id="oddsHalves">
+              <div class="oddsHalf" id="odds1up"><span class="bar"></span><em>1UP</em></div>
+              <div class="oddsHalf" id="odds2up"><span class="bar"></span><span class="bar"></span><em>2UP</em></div>
             </div>
           </div>
+          <div id="oddsX2Bubble">ODDS<br>X2</div>
         </div>
-        <div id="oddsX2Bubble">ODDS<br>X2</div>
       </div>
       <div id="title">BINGO PLANET +</div>
       <div id="midArea">
@@ -475,9 +485,9 @@ const P_CROSS = 0.025;                          // 中央十字亮燈（亮燈�
 const CROSS_LIT_IDX = [12, 7, 17, 11, 13];      // 中心與其上下左右五格
 // 升級機率（已加倍）：等級 1~2 為 2/30，等級 3 以上為 2/50；BET 10 再乘 2
 const upgradeChance = lv => lv <= 2 ? 2/30 : 2/50;
-// 洞框顏色：一般藍色，5/15/25 黃色，10/20 紅色
-const YELLOW_HOLES = new Set([5,15,25]);
-const RED_HOLES = new Set([10,20]);
+// 洞框顏色：一般藍色，5/10/15/20/25 黃框，1/11/21 紅框
+const YELLOW_HOLES = new Set([5,10,15,20,25]);
+const RED_HOLES = new Set([1,11,21]);
 const BALL_INTERVAL = 10000;   // 前三球每 10 秒發射一顆
 const RESET_DELAY   = 10000;  // 結算後 10 秒重新開局
 
@@ -621,10 +631,10 @@ function refreshBonusUI(){
   $("corner500").classList.toggle("lit", S.cornerStage === 2);
   $("bonusRed").classList.toggle("lit", S.bonusRed);
   $("bonusYellow").classList.toggle("lit", S.bonusYellow);
-  // ODDS UP 三階：1UP / 2UP / X2（得分兩倍），互斥顯示
+  // ODDS UP 三階：1UP / 2UP / X2（右上角小泡泡），互斥顯示
   $("odds1up").classList.toggle("lit", S.oddsUpStage === 1);
   $("odds2up").classList.toggle("lit", S.oddsUpStage === 2);
-  $("oddsX2t").classList.toggle("lit", S.oddsUpStage === 3);
+  $("oddsX2Bubble").classList.toggle("lit", S.oddsUpStage === 3);
   $("bnPlus").querySelector(".ball").classList.toggle("active", S.plusH || S.plusV);
   $("bnCorner").querySelector(".ball").classList.toggle("active", S.cornerStage > 0);
   $("bnBonus").querySelector(".ball").classList.toggle("active", S.bonusYellow || S.bonusRed);
@@ -1093,12 +1103,15 @@ function stepBall(b, dt, now){
     }
     const relVx = vx - sv.x, relVz = vz - sv.z;
     const relV = Math.hypot(relVx, relVz);
-    if(d < HOLE_R*0.9 && relV < 3.2){
+    // 越靠近中心的洞越容易進球（同實機：初速快時球多在內圈 21~25 入洞）
+    // 外圈(8.2) 門檻 3.2、中圈(5.8) 約 4.0、內圈(3.4) 約 4.8
+    const capV = 3.2 + (1 - h.r / 8.2) * 2.8;
+    if(d < HOLE_R*0.9 && relV < capV){
       // 球心越過洞緣且速度夠慢：翻入洞內（進入落下物理）
       startCapture(b, h, now, x, z, vx, vz);
       return;
     }
-    if(d < HOLE_R && relV >= 3.2){
+    if(d < HOLE_R && relV >= capV){
       // 太快輾過洞口：撞擊洞緣被彈掉並損失能量，撞幾次自然變慢才入得了洞
       const nx = (x-hp.x)/Math.max(d,1e-4), nz = (z-hp.z)/Math.max(d,1e-4);
       const vn = relVx*nx + relVz*nz;
@@ -1106,8 +1119,8 @@ function stepBall(b, dt, now){
         vx -= 1.55*vn*nx; vz -= 1.55*vn*nz;
         vx = sv.x + (vx - sv.x)*0.72; vz = sv.z + (vz - sv.z)*0.72;
       }
-    } else if(d < HOLE_R*2.4 && relV < 2.5){
-      // 洞口周圍的漏斗導引：慢速球被導向洞心
+    } else if(d < HOLE_R*2.4 && relV < capV - 0.7){
+      // 洞口周圍的漏斗導引：慢速球被導向洞心（內圈導引窗口也較寬）
       const pull = 10 * (1 - d/(HOLE_R*2.4));
       vx += (hp.x-x)/Math.max(d,1e-4) * pull * dt;
       vz += (hp.z-z)/Math.max(d,1e-4) * pull * dt;
@@ -1268,6 +1281,12 @@ function onBallLanded(b, h){
     });
   } else if(landedCount === 4){
     S.ball4Hole = h.num;
+    // ODDS UP 1UP/2UP 在此刻生效：第四球是黃球且進黃框洞 → 押注等級當場跳升
+    if(S.oddsUpStage > 0 && S.oddsUpStage < 3 && S.ball4Yellow && YELLOW_HOLES.has(h.num)){
+      S.level = Math.min(10, S.level + S.oddsUpStage);
+      showMsg("ODDS " + S.oddsUpStage + "UP！押注等級跳至 " + S.level, 3000);
+      refreshScores();
+    }
     // 第四顆球落洞之後才開始倒數，這 10 秒內同樣可按住 BET 10 + A~D 付費旋轉
     S.spin10Window = true;
     setStatus("第 5 球倒數中：按住 BET 10 再按 A~D 旋轉數字（每次 10 credits，成功率 10%）");
@@ -1307,20 +1326,13 @@ function scoreRound(){
   const markedIdx = currentMarkedIdx();   // 十字亮燈的格子視同該號碼進球
   let total = 0;
   const counts = {3:0,4:0,5:0};
-  // ODDS UP：燈亮不代表中獎，第四球必須是「黃球」且進黃框洞（5/15/25）才生效
-  // 1UP/2UP = 派彩等級提升 1 或 2 級；X2 = 本局得分兩倍
-  let payLevel = S.level, winX2 = false;
-  const oddsHit = S.oddsUpStage > 0 && S.ball4Yellow && YELLOW_HOLES.has(S.ball4Hole);
-  if(oddsHit){
-    if(S.oddsUpStage === 3){
-      winX2 = true;
-      showMsg("ODDS X2 生效！本局得分兩倍", 3000);
-    } else {
-      payLevel = Math.min(10, payLevel + S.oddsUpStage);
-      showMsg("ODDS " + S.oddsUpStage + "UP 生效！以等級 " + payLevel + " 派彩", 3000);
-    }
+  // ODDS UP：1UP/2UP 已在第四球入洞當下跳升等級；X2 在此結算時把本局得分乘 2
+  let winX2 = false;
+  if(S.oddsUpStage === 3 && S.ball4Yellow && YELLOW_HOLES.has(S.ball4Hole)){
+    winX2 = true;
+    showMsg("ODDS X2 生效！本局得分兩倍", 3000);
   }
-  const pay = PAYTABLE[payLevel-1];
+  const pay = PAYTABLE[S.level-1];
   const winCells = new Set();
   if(S.bet > 0 || S.freeGame){
     LINES.forEach((line, li)=>{
