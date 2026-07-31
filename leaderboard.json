@@ -3,10 +3,10 @@
     "banked": 0,
     "totalIn": 19100,
     "playTime": 5157,
-    "ts": 1785431143651,
-    "playCount": 30,
-    "totalScore": 259198,
-    "live": 133874
+    "ts": 1785452668554,
+    "playCount": 32,
+    "totalScore": 283736,
+    "live": 158412
   },
   "阿熹": {
     "banked": 0,
@@ -17,10 +17,11 @@
     "live": 96576
   },
   "Hrf": {
-    "banked": 69564,
+    "banked": 150412,
     "totalIn": 5800,
-    "playCount": 11,
-    "ts": 1785378902468,
-    "totalScore": 110384
+    "playCount": 17,
+    "ts": 1785456309620,
+    "totalScore": 191232,
+    "live": 0
   }
 }
