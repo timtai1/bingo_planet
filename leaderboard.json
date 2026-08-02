@@ -1,12 +1,12 @@
 {
   "老戴": {
-    "banked": 753228,
+    "banked": 0,
     "totalIn": 25300,
     "playTime": 5157,
-    "ts": 1785652001671,
-    "playCount": 63,
-    "totalScore": 869842,
-    "live": 0
+    "ts": 1785660163220,
+    "playCount": 64,
+    "totalScore": 872172,
+    "live": 755558
   },
   "阿熹": {
     "banked": 0,
@@ -26,9 +26,17 @@
   },
   "devtest1.1": {
     "banked": 0,
-    "totalIn": 0,
-    "playCount": 0,
-    "live": 0,
-    "ts": 1785651661384
+    "totalIn": 2100,
+    "playCount": 1,
+    "live": 2080,
+    "ts": 1785671589671
+  },
+  "老戴macbook": {
+    "banked": 0,
+    "totalIn": 2500,
+    "playCount": 5,
+    "ts": 1785671624804,
+    "totalScore": 23882,
+    "live": 26362
   }
 }
