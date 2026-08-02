@@ -517,8 +517,8 @@ const P_CROSS = 0.025;                          // 中央十字亮燈（亮燈�
 const CROSS_LIT_IDX = [12, 7, 17, 11, 13];      // 中心與其上下左右五格
 // 升級機率（已加倍）：等級 1~2 為 2/30，等級 3 以上為 2/50；BET 10 再乘 2
 const upgradeChance = lv => lv <= 2 ? 2/30 : 2/50;
-// 洞框顏色：一般藍色，5/10/15/20/25 黃框，1/11/21 紅框
-const YELLOW_HOLES = new Set([5,10,15,20,25]);
+// 洞框顏色：一般藍色，5/15/25 黃框，1/11/21 紅框
+const YELLOW_HOLES = new Set([5,15,25]);
 const RED_HOLES = new Set([1,11,21]);
 const BALL_INTERVAL = 5000;    // 前三球每 5 秒發射一顆
 const RESET_DELAY   = 10000;  // 結算後 10 秒重新開局
@@ -1537,7 +1537,7 @@ function scoreRound(){
     }
     // ODDS UP X2：中獎則本局總得分兩倍
     if(winX2) total *= 2;
-    // BONUS GAME：燈亮且第五球是「紅球」並進對應色框的洞才中獎（黃框 5/15/25、紅框 10/20），下一局免費
+    // BONUS GAME：燈亮且第五球是「紅球」並進對應色框的洞才中獎（黃框 5/15/25、紅框 1/11/21），下一局免費
     const ball5Hole = S.landedBalls[4] || 0;
     if(ball5Hole && S.ball5Red){
       const hitYellow = S.bonusYellow && YELLOW_HOLES.has(ball5Hole);
