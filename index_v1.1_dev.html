@@ -361,6 +361,7 @@
     </div>
     <div id="topBtns">
       <button id="rankBtn">排行榜</button>
+      <button id="bgmBtn">音樂：關</button>
       <button id="pauseBtn">暫停</button>
     </div>
     <div id="spinMsg"></div>
@@ -709,7 +710,9 @@ function updateLineHighlights(){
   LINES.forEach((line, li)=>{
     let c = line.filter(i => markedIdx.has(i)).length;
     const isRow = li < 5, isCol = li >= 5 && li < 10;
-    if(((isRow && S.plusH) || (isCol && S.plusV)) && lineHasRun2(line, markedIdx)) c = Math.min(5, c + 1);
+    // PLUS ONE 只在「線上恰好 2 顆真球且相鄰」時才把它視同 3 連線；
+    // 若線上已經有 3 顆以上真球（不論是否相鄰），就不再疊加，避免重複灌水
+    if(c < 3 && ((isRow && S.plusH) || (isCol && S.plusV)) && lineHasRun2(line, markedIdx)) c = Math.min(5, c + 1);
     svgLines[li].classList.toggle("winline", c >= 3);
   });
 }
@@ -803,8 +806,8 @@ const SFX = {
     sfxTone(1800, 0.09, {type:"triangle", gain:0.3});
     sfxTone(2400, 0.14, {type:"triangle", gain:0.25, delay:0.05});
   },
-  bet(){                   // 下注：短促中音 click
-    sfxTone(700, 0.06, {type:"square", gain:0.18, toFreq:500});
+  bet(){                   // 下注：清脆短促的高音 blip，連續下注時也聽得出來
+    sfxTone(950, 0.09, {type:"square", gain:0.35, toFreq:650});
   },
   rotate(){                // 旋轉 A~D：短暫上滑鋸齒音，像齒輪卡一聲
     sfxTone(220, 0.12, {type:"sawtooth", gain:0.15, toFreq:340});
@@ -821,6 +824,35 @@ const SFX = {
   }
 };
 function playSfx(name){ if(SFX[name]) SFX[name](); }
+
+/* ---------------- 背景音樂 ----------------
+   原創、程式即時合成的輕快 8-bit 風格循環旋律（非重製任何既有遊戲配樂，避免版權問題）。
+   用一個簡單的 step sequencer，每步排一顆主旋律音 + 每兩步排一顆低音，無限循環。 */
+let bgmOn = false, bgmTimer = null, bgmStep = 0;
+const BGM_STEP_SEC = 0.16;
+// C 大調輕快琶音，16 步一輪
+const BGM_MELODY = [523,659,784,659, 587,698,880,698, 523,659,784,988, 659,587,523,392];
+const BGM_BASS   = [131,131,147,147, 131,131,165,165, 131,131,175,175, 147,147,131,131];
+function bgmTick(){
+  if(!bgmOn) return;
+  sfxTone(BGM_MELODY[bgmStep % BGM_MELODY.length], BGM_STEP_SEC*0.85, {type:"square", gain:0.05});
+  if(bgmStep % 2 === 0){
+    sfxTone(BGM_BASS[bgmStep % BGM_BASS.length], BGM_STEP_SEC*1.7, {type:"triangle", gain:0.06});
+  }
+  bgmStep++;
+}
+function startBgm(){
+  bgmOn = true;
+  $("bgmBtn").textContent = "音樂：開";
+  ensureAudio();
+  if(!bgmTimer) bgmTimer = setInterval(bgmTick, BGM_STEP_SEC*1000);
+}
+function stopBgm(){
+  bgmOn = false;
+  $("bgmBtn").textContent = "音樂：關";
+  clearInterval(bgmTimer); bgmTimer = null;
+}
+$("bgmBtn").addEventListener("click", ()=>{ bgmOn ? stopBgm() : startBgm(); });
 
 /* ---------------- 押注 ---------------- */
 // 一次押 n 點（免費局也可下注來提升押注等級）；獎勵燈只在 BET 10 時擲骰
@@ -1478,10 +1510,11 @@ function scoreRound(){
   if(S.bet > 0 || S.freeGame){
     LINES.forEach((line, li)=>{
       let c = line.filter(i => markedIdx.has(i)).length;
-      // PLUS ONE：橫向燈對橫排、縱向燈對直排，各自把連線數 +1（兩個連續號碼就算 3 連線）
+      // PLUS ONE：橫向燈對橫排、縱向燈對直排，恰好 2 顆真球且相鄰才算 3 連線；
+      // 線上已有 3 顆以上真球時不再疊加，避免像「20,8,4 三顆真球、8-4 相鄰」被多灌成 4 連線
       const isRow = li < 5, isCol = li >= 5 && li < 10;
-      if(isRow && S.plusH && lineHasRun2(line, markedIdx)) c = Math.min(5, c + 1);
-      if(isCol && S.plusV && lineHasRun2(line, markedIdx)) c = Math.min(5, c + 1);
+      if(c < 3 && isRow && S.plusH && lineHasRun2(line, markedIdx)) c = Math.min(5, c + 1);
+      if(c < 3 && isCol && S.plusV && lineHasRun2(line, markedIdx)) c = Math.min(5, c + 1);
       if(c >= 3){
         counts[c]++;
         // ODDS X2 規則標示：斜線（兩條對角線）的得分為兩倍
@@ -1781,6 +1814,7 @@ $("nameOk").addEventListener("click", ()=>{
   if(!name){ $("nameInput").focus(); return; }
   $("nameModal").style.display = "none";
   ensureAudio();   // 藉這次真實使用者互動解鎖音訊，之後發球/入洞等自動觸發的音效才不會被瀏覽器靜音
+  startBgm();      // 進遊戲後自動播放背景音樂，玩家仍可按右上角「音樂」關掉
   enterGame(name);
 });
 $("nameInput").addEventListener("keydown", e=>{
@@ -1885,6 +1919,7 @@ startRound();
 // 第一次進入：請玩家輸入名字；老玩家直接取回寄存分數
 if(store.current){
   enterGame(store.current);
+  startBgm();   // 老玩家沒有「開始遊戲」點擊，先排好 BGM，第一次真正互動後會自動有聲音
 } else {
   $("nameModal").style.display = "flex";
   setTimeout(()=>$("nameInput").focus(), 100);
