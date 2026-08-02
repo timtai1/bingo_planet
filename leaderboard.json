@@ -1,12 +1,12 @@
 {
   "老戴": {
-    "banked": 0,
-    "totalIn": 19200,
+    "banked": 753228,
+    "totalIn": 25300,
     "playTime": 5157,
-    "ts": 1785585652400,
-    "playCount": 35,
-    "totalScore": 472214,
-    "live": 346990
+    "ts": 1785652001671,
+    "playCount": 63,
+    "totalScore": 869842,
+    "live": 0
   },
   "阿熹": {
     "banked": 0,
@@ -23,5 +23,12 @@
     "ts": 1785456309620,
     "totalScore": 191232,
     "live": 0
+  },
+  "devtest1.1": {
+    "banked": 0,
+    "totalIn": 0,
+    "playCount": 0,
+    "live": 0,
+    "ts": 1785651661384
   }
 }
